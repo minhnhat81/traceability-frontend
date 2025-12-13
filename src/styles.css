@@ -1,0 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Nền tổng thể */
+body {
+  @apply bg-gray-50 text-gray-800 font-inter;
+}
+
+/* Container trung tâm */
+.container {
+  @apply max-w-6xl mx-auto p-4;
+}
+
+/* Card dùng trong menu */
+.card {
+  @apply bg-white rounded-xl shadow-sm p-4 mb-4 border border-gray-100;
+}
+
+/* Accordion hoặc menu item hover */
+.menu-item:hover {
+  @apply bg-gray-100 transition-colors;
+}
+
+/* Dark mode (tùy chọn) */
+:root {
+  color-scheme: light dark;
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* ----------------------------
+    ⭐ Responsive Layout Fixes
+-----------------------------*/
+
+/* Fix scroll sidebar trên mobile */
+.sidebar-scroll {
+  @apply overflow-y-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Drawer transition mượt hơn */
+.mobile-sidebar {
+  transition: transform 0.25s ease-out;
+}
+
+/* Độ rộng cố định sidebar desktop */
+.sidebar-desktop {
+  width: 18rem; /* 72 tailwind */
+}
+
+/* Fix main content trên mobile */
+.main-content {
+  @apply p-4 md:p-6 overflow-auto;
+}
+
+/* Để QR không bị vỡ layout trên mobile */
+.qr-wrapper {
+  @apply flex flex-col items-center justify-center mt-2 mb-2;
+}
+
+/* Timeline area đảm bảo không bị tràn ngang */
+.timeline-wrapper {
+  @apply overflow-x-hidden;
+}
+
+/* EPCIS Graph responsive container */
+.epcis-graph-container {
+  @apply w-full overflow-x-auto rounded-lg bg-white shadow-sm p-2;
+}
+
+/* Merkle tree section margin fix */
+.merkle-section {
+  @apply mt-4 mb-4;
+}
+
+/* Documents table responsive wrapper */
+.table-responsive {
+  @apply w-full overflow-x-auto;
+}
+
+/* Tabs content padding fix */
+.ant-tabs-content-holder {
+  @apply p-2 md:p-4;
+}
+
+/* Raw JSON block scroll */
+.raw-json-block {
+  @apply bg-gray-100 rounded p-3 overflow-x-auto text-sm;
+}
+
+/* DPP Structured View card spacing */
+.dpp-block {
+  @apply space-y-4;
+}
+
+/* Force-Graph canvas responsive */
+.force-graph-container canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Header title mobile fix */
+.page-title {
+  @apply text-xl md:text-3xl font-semibold;
+}
+
+/* EPCIS table small text */
+.epcis-table td {
+  @apply text-xs md:text-sm;
+}
+
+/* ============================================
+      ⭐ SIDEBAR ICON + ANIMATION BEAUTIFUL
+============================================ */
+
+/* Menu item */
+.sidebar-item {
+  @apply flex items-center gap-3 px-3 py-2 rounded-md text-gray-700;
+  transition: all 0.25s ease-in-out;
+}
+
+/* Hover effect */
+.sidebar-item:hover {
+  background: #f0f5ff;
+  transform: translateX(4px);
+}
+
+/* Icon default */
+.menu-icon {
+  font-size: 18px;
+  color: #8c8c8c;
+  transition: all 0.25s ease;
+}
+
+/* Hover on icon */
+.sidebar-item:hover .menu-icon {
+  color: #2f54eb;
+  transform: scale(1.15);
+}
+
+/* Active item */
+.sidebar-active {
+  background: #e6f4ff !important;
+  border-left: 3px solid #1677ff;
+  transform: translateX(4px);
+}
+
+/* Active icon */
+.sidebar-active .menu-icon {
+  color: #1677ff !important;
+}
+
+/* Extra smooth animation */
+.sidebar-item,
+.menu-icon {
+  transition: all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Polygon Configuration",
+  "type": "object",
+  "properties": {
+    "rpc_url": {
+      "type": "string",
+      "title": "RPC URL",
+      "default": "https://polygon-rpc.com/"
+    },
+    "contract_address": {
+      "type": "string",
+      "title": "Contract Address"
+    },
+    "chain_id": {
+      "type": "number",
+      "title": "Chain ID",
+      "default": 80002
+    },
+    "gas_limit": {
+      "type": "number",
+      "title": "Gas Limit",
+      "default": 2000000
+    },
+    "max_fee_gwei": {
+      "type": "number",
+      "title": "Max Fee (Gwei)",
+      "default": 80
+    },
+    "priority_fee_gwei": {
+      "type": "number",
+      "title": "Priority Fee (Gwei)",
+      "default": 30
+    },
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "enum": ["real", "mock"],
+      "default": "real"
+    },
+    "private_key": {
+      "type": "string",
+      "title": "Private Key",
+      "format": "password"
+    }
+  },
+  "required": ["rpc_url", "chain_id", "private_key"]
+}
