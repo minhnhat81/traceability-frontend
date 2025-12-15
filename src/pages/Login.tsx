@@ -17,16 +17,15 @@ export default function Login() {
   setError(null);
 
   try {
-    const params = new URLSearchParams();
-    params.append("username", username);
-    params.append("password", password);
-
     const res = await api().post(
       "/auth/login",
-      params,
+      {
+        username,
+        password,
+      },
       {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
         },
       }
     );
@@ -44,6 +43,7 @@ export default function Login() {
     setLoading(false);
   }
 }
+
 
 
 
