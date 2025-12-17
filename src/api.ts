@@ -8,7 +8,8 @@ function normalizeBase(url: string) {
 
 // ✅ Ưu tiên env VITE_API_URL (Vercel phải set), nếu không có thì fallback về Heroku
 export const API_BASE = normalizeBase(
-  import.meta.env.VITE_API_URL || 'http://localhost:8022'
+  import.meta.env.VITE_API_URL ||
+    "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com"
 );
 
 export function api(): AxiosInstance {
