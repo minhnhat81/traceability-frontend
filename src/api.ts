@@ -21,6 +21,7 @@ export function api(): AxiosInstance {
       const token = useAuth.getState().token
 
       if (token) {
+        // ✅ Axios v1 đúng chuẩn
         cfg.headers.set('Authorization', `Bearer ${token}`)
       }
 
@@ -32,13 +33,10 @@ export function api(): AxiosInstance {
   instance.interceptors.response.use(
     res => res,
     (err: AxiosError) => {
-      const status = err.response?.status
-
-      if (status === 401) {
+      if (err.response?.status === 401) {
         const auth = useAuth.getState() as any
         auth.logout?.()
       }
-
       return Promise.reject(err)
     }
   )
