@@ -12,41 +12,34 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleLogin(e: React.FormEvent) {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  try {
-    const res = await api().post(
-      "/auth/login",
-      {
-        username,
-        password,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
+    console.log("LOGIN JSON VERSION 2025-01-15"); // 👈 để verify build
+
+    try {
+      const res = await api().post(
+        "/auth/login",
+        {
+          username,
+          password,
+        }
+      );
+
+      if (res.data?.access_token) {
+        setToken(res.data.access_token);
+        window.location.href = "/";
+      } else {
+        setError("Sai thông tin đăng nhập");
       }
-    );
-
-    if (res.data?.access_token) {
-      setToken(res.data.access_token);
-      window.location.href = "/";
-    } else {
-      setError("Sai thông tin đăng nhập");
+    } catch (err: any) {
+      console.error("LOGIN ERROR:", err?.response?.data || err);
+      setError("Không thể đăng nhập. Vui lòng kiểm tra lại.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    console.error(err);
-    setError("Không thể đăng nhập. Vui lòng kiểm tra lại.");
-  } finally {
-    setLoading(false);
   }
-}
-
-
-
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-muted/20">
@@ -57,10 +50,11 @@ export default function Login() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">Tên đăng nhập</label>
+            <label className="text-sm font-medium text-gray-700">
+              Tên đăng nhập
+            </label>
             <Input
               type="text"
-              placeholder="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -68,10 +62,11 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
+            <label className="text-sm font-medium text-gray-700">
+              Mật khẩu
+            </label>
             <Input
               type="password"
-              placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
