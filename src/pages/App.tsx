@@ -32,12 +32,10 @@ import BlockchainProofPage from "./customer/BlockchainProofPage";
 export default function App() {
   const { token, authInitialized, initAuth } = useAuth();
 
-  // ✅ Khởi tạo auth state từ localStorage 1 lần duy nhất
   useEffect(() => {
     initAuth();
   }, [initAuth]);
 
-  // ⏳ Trong khi chưa init xong → hiển thị màn hình chờ
   if (!authInitialized) {
     return (
       <div className="p-4 text-center text-gray-500">
@@ -46,41 +44,53 @@ export default function App() {
     );
   }
 
-  // ❌ Nếu chưa login → hiển thị trang login
-  if (!token) {
-    return <Login />;
-  }
-
-  // ✅ Nếu đã login → render layout chính
   return (
-    <AppLayout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/batches" element={<Batches />} />
-        <Route path="/epcis-events" element={<EPCISEvents />} />
-        <Route path="/epcis/capture" element={<EPCISCapture />} />
-        <Route path="/documents" element={<DocumentsVC />} />
-        <Route path="/observer" element={<Observer />} />
-        <Route path="/configs" element={<Configs />} />
-        <Route path="/batch" element={<BatchDetail />} />
-        <Route path="/configs_blockchain" element={<BlockchainSettings />} />
-        <Route path="/supplier/farms" element={<Farms />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/suppliers" element={<Suppliers />} />
-        <Route path="/dpp_templates" element={<DPPTemplates />} />
-        <Route path="/material" element={<MaterialPage />} />
-        <Route path="/dpp/:refId" element={<DppPage />} />
-        <Route path="/dpp_list" element={<DppListPage />} />
-        <Route path="/consumer/scan" element={<QRScanPage />} />
-        <Route path="/consumer/product" element={<ProductInfoPage />} />
-        <Route path="/consumer/map" element={<MapViewPage />} />
-        <Route path="/consumer/certifications" element={<CertificationsPage />} />
-        <Route path="/consumer/repair" element={<RepairRecyclePage />} />
-        <Route path="/consumer/blockchain-proof" element={<BlockchainProofPage />} />
-        <Route path="*" element={<Navigate to="/" />} />
+    <Routes>
+      {/* ===== PUBLIC ROUTE ===== */}
+      <Route
+        path="/login"
+        element={token ? <Navigate to="/" replace /> : <Login />}
+      />
 
-      </Routes>
-    </AppLayout>
+      {/* ===== PROTECTED ROUTES ===== */}
+      <Route
+        path="/*"
+        element={
+          token ? (
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/batches" element={<Batches />} />
+                <Route path="/epcis-events" element={<EPCISEvents />} />
+                <Route path="/epcis/capture" element={<EPCISCapture />} />
+                <Route path="/documents" element={<DocumentsVC />} />
+                <Route path="/observer" element={<Observer />} />
+                <Route path="/configs" element={<Configs />} />
+                <Route path="/batch" element={<BatchDetail />} />
+                <Route path="/configs_blockchain" element={<BlockchainSettings />} />
+                <Route path="/supplier/farms" element={<Farms />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/dpp_templates" element={<DPPTemplates />} />
+                <Route path="/material" element={<MaterialPage />} />
+                <Route path="/dpp/:refId" element={<DppPage />} />
+                <Route path="/dpp_list" element={<DppListPage />} />
+                <Route path="/consumer/scan" element={<QRScanPage />} />
+                <Route path="/consumer/product" element={<ProductInfoPage />} />
+                <Route path="/consumer/map" element={<MapViewPage />} />
+                <Route path="/consumer/certifications" element={<CertificationsPage />} />
+                <Route path="/consumer/repair" element={<RepairRecyclePage />} />
+                <Route path="/consumer/blockchain-proof" element={<BlockchainProofPage />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </AppLayout>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+    </Routes>
   );
 }
+
