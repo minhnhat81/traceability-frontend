@@ -1,28 +1,37 @@
 import React from "react";
 import { Button } from "antd";
 import { UserOutlined, LogoutOutlined, MenuOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth";
 
 interface TopbarProps {
-  onMenuClick?: () => void; // thêm props để mở sidebar
+  onMenuClick?: () => void;
 }
 
 export default function Topbar({ onMenuClick }: TopbarProps) {
   const { user, clearAuth, authInitialized } = useAuth();
+  const navigate = useNavigate();
 
   if (!authInitialized) return null;
 
   const username = user?.username || user?.name || "User";
   const role = user?.role || "guest";
 
+  const handleLogout = () => {
+    clearAuth();
+
+    // ✅ SPA redirect (KHÔNG reload page)
+    navigate("/login", { replace: true });
+  };
+
   return (
     <header className="bg-white shadow px-6 py-3 flex justify-between items-center">
-      {/* ===== LEFT AREA ===== */}
+      {/* LEFT */}
       <div className="flex items-center gap-3">
-        {/* Nút mở sidebar cho mobile */}
         <button
+          type="button"
           className="md:hidden p-2 rounded hover:bg-gray-100"
-          onClick={() => onMenuClick && onMenuClick()}
+          onClick={onMenuClick}
         >
           <MenuOutlined style={{ fontSize: 20 }} />
         </button>
@@ -30,20 +39,18 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         <h1 className="text-lg font-semibold">Traceability Portal</h1>
       </div>
 
-      {/* ===== RIGHT AREA ===== */}
+      {/* RIGHT */}
       <div className="flex items-center gap-4">
         <span className="text-sm text-gray-600 flex items-center gap-2">
-          <UserOutlined style={{ color: "#5b3cc4" }} /> {username} ({role})
+          <UserOutlined style={{ color: "#5b3cc4" }} />
+          {username} ({role})
         </span>
 
         <Button
           type="link"
           danger
           icon={<LogoutOutlined />}
-          onClick={() => {
-            clearAuth();
-            window.location.href = "/login";
-          }}
+          onClick={handleLogout}
         >
           Logout
         </Button>
