@@ -2,44 +2,47 @@ import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
-} from 'axios'
+} from "axios";
+import { useAuth } from "./store/auth";
 
 export const API_BASE =
   import.meta.env.VITE_API_URL ||
-  'https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com'
+  "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
 
 export function api(): AxiosInstance {
   const instance = axios.create({
     baseURL: API_BASE,
     timeout: 30000,
     withCredentials: false,
-  })
+  });
 
-  // ✅ Request interceptor: gắn token
   instance.interceptors.request.use(
     (cfg: InternalAxiosRequestConfig) => {
-      const token = localStorage.getItem('access_token')
+      // ✅ FIX 403: đọc token từ cả store + localStorage
+      const token =
+        useAuth.getState().token ||
+        localStorage.getItem("token") ||
+        localStorage.getItem("access_token");
 
       if (token) {
-        cfg.headers.set('Authorization', `Bearer ${token}`)
+        cfg.headers.set("Authorization", `Bearer ${token}`);
       }
 
-      return cfg
+      return cfg;
     },
     (err: AxiosError) => Promise.reject(err)
-  )
+  );
 
-  // ✅ Response interceptor: auto logout khi 401
   instance.interceptors.response.use(
-    res => res,
+    (res) => res,
     (err: AxiosError) => {
-      if (err.response?.status === 401) {
-        localStorage.removeItem('access_token')
-        window.location.href = '/login'
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        const auth = useAuth.getState() as any;
+        auth.clearAuth?.();
       }
-      return Promise.reject(err)
+      return Promise.reject(err);
     }
-  )
+  );
 
-  return instance
+  return instance;
 }
