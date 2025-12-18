@@ -1,50 +1,79 @@
-// src/api/index.ts hoặc src/api/api.ts
+// src/api.ts
 import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
+import { useAuth } from "./store/auth";
 
 export const API_BASE =
   import.meta.env.VITE_API_URL ||
-  "https://traceability-backend-v2-7a55d0dee97d.herokuapp.com";
+  "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
 
-// 🔒 Singleton instance
-let _api: AxiosInstance | null = null;
+function getToken(): string | null {
+  // ✅ Ưu tiên access_token, fallback token (vì project bạn đang lẫn 2 key)
+  return (
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("token") ||
+    null
+  );
+}
 
 export function api(): AxiosInstance {
-  if (_api) return _api;
-
-  _api = axios.create({
+  const instance = axios.create({
     baseURL: API_BASE,
     timeout: 30000,
     withCredentials: false,
   });
 
-  // ✅ Request interceptor: gắn token
-  _api.interceptors.request.use(
+  instance.interceptors.request.use(
     (cfg: InternalAxiosRequestConfig) => {
-      const token = localStorage.getItem("access_token");
+      // ✅ Lấy token MỖI REQUEST (tránh lỗi instance tạo trước khi login)
+      const token = getToken();
+
       if (token) {
-        cfg.headers = cfg.headers || {};
-        cfg.headers.Authorization = `Bearer ${token}`;
+        // axios v1: cfg.headers có thể là AxiosHeaders hoặc object thường
+        if (cfg.headers && typeof (cfg.headers as any).set === "function") {
+          (cfg.headers as any).set("Authorization", `Bearer ${token}`);
+        } else {
+          cfg.headers = {
+            ...(cfg.headers || {}),
+            Authorization: `Bearer ${token}`,
+          } as any;
+        }
       }
+
       return cfg;
     },
     (err: AxiosError) => Promise.reject(err)
   );
 
-  // ✅ Response interceptor
-  _api.interceptors.response.use(
+  instance.interceptors.response.use(
     (res) => res,
     (err: AxiosError) => {
-      if (err.response?.status === 401) {
+      const status = err.response?.status;
+
+      // ✅ 401/403 đều coi là token invalid/missing
+      if (status === 401 || status === 403) {
+        // clear zustand + localStorage
+        try {
+          const auth = useAuth.getState() as any;
+          auth.clearAuth?.();
+        } catch {}
+
         localStorage.removeItem("access_token");
-        window.location.href = "/login";
+        localStorage.removeItem("token");
+
+        // nếu bạn đang dùng HashRouter thì nên về "#/login"
+        // (BrowserRouter thì "/login")
+        if (window.location.hash !== "#/login") {
+          window.location.hash = "#/login";
+        }
       }
+
       return Promise.reject(err);
     }
   );
 
-  return _api;
+  return instance;
 }
