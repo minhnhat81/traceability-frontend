@@ -1,48 +1,32 @@
-import axios, {
-  AxiosInstance,
-  AxiosError,
-  InternalAxiosRequestConfig,
-} from "axios";
-import { useAuth } from "./store/auth";
+// src/api.ts
+import axios from "axios";
 
-export const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://traceability-backend-v2-55d0dee97d.herokuapp.com";
 
-export function api(): AxiosInstance {
+export const api = () => {
+  const token = localStorage.getItem("access_token"); // ✅ SỬA Ở ĐÂY
+
   const instance = axios.create({
-    baseURL: API_BASE,
-    timeout: 30000,
-    withCredentials: false,
-  });
-
-  instance.interceptors.request.use(
-    (cfg: InternalAxiosRequestConfig) => {
-      // ✅ FIX 403: đọc token từ cả store + localStorage
-      const token =
-        useAuth.getState().token ||
-        localStorage.getItem("token") ||
-        localStorage.getItem("access_token");
-
-      if (token) {
-        cfg.headers.set("Authorization", `Bearer ${token}`);
-      }
-
-      return cfg;
+    baseURL: API_BASE_URL,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    (err: AxiosError) => Promise.reject(err)
-  );
+  });
 
   instance.interceptors.response.use(
     (res) => res,
-    (err: AxiosError) => {
+    (err) => {
       if (err.response?.status === 401 || err.response?.status === 403) {
-        const auth = useAuth.getState() as any;
-        auth.clearAuth?.();
+        console.warn("Unauthorized → token invalid or missing");
       }
       return Promise.reject(err);
     }
   );
 
   return instance;
-}
+};
+
+export default api;
