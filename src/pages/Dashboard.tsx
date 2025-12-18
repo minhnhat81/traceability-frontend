@@ -203,8 +203,8 @@ export default function DashboardPage() {
         setErr("");
 
         const [evRes, btRes] = await Promise.all([
-          api().get("/api/epcis/events"),
-          api().get("/api/batches"),
+          api().get("/epcis/events"),
+          api().get("/batches"),
         ]);
 
         setEventsAll(evRes.data?.items || []);
@@ -423,7 +423,7 @@ export default function DashboardPage() {
     }));
 
     try {
-      const res = await api().get("/api/epcis/dpp/full-timeline", {
+      const res = await api().get("/epcis/dpp/full-timeline", {
         params: { batch_code: batchCode },
       });
 
