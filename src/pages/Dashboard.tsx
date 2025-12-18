@@ -203,8 +203,8 @@ export default function DashboardPage() {
         setErr("");
 
         const [evRes, btRes] = await Promise.all([
-          api().get("/api/epcis/events"),
-          api().get("/api/batches"),
+          api().get("/api/epcis/events/"),
+          api().get("/api/batches/"),
         ]);
 
         setEventsAll(evRes.data?.items || []);
