@@ -5,7 +5,7 @@ import { useAuth } from "../store/auth";
 import { api } from "../api";
 
 export default function Login() {
-  const { setAuth } = useAuth();
+  const { setToken } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -24,15 +24,16 @@ export default function Login() {
       });
 
       const token = res.data?.access_token;
+
       if (!token) {
         setError("Sai thông tin đăng nhập");
         return;
       }
 
-      // tenant_id có thể trả riêng hoặc nằm trong JWT
-      const tenantId = res.data?.tenant_id;
+      // ✅ CHUẨN: chỉ set token
+      setToken(token);
 
-      setAuth(token, undefined, tenantId);
+      // redirect về trang chính
       window.location.href = "/";
     } catch (err: any) {
       console.error("LOGIN ERROR:", err?.response?.data || err);
