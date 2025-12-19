@@ -2,11 +2,12 @@ import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
+  AxiosRequestHeaders,
 } from "axios";
 
 export const API_BASE =
   import.meta.env.VITE_API_URL ||
-  "https://traceability-backend-v2-7a55d0dee97d.herokuapp.com";
+  "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
 
 /**
  * Singleton axios instance
@@ -31,7 +32,10 @@ export function api(): AxiosInstance {
       const token = localStorage.getItem("access_token");
       const tenantId = localStorage.getItem("tenant_id");
 
-      cfg.headers = cfg.headers || {};
+      // ✅ FIX TS2322 (điểm mấu chốt)
+      cfg.headers = {
+        ...(cfg.headers || {}),
+      } as AxiosRequestHeaders;
 
       // JWT
       if (token) {
