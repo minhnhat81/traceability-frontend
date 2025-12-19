@@ -2,16 +2,13 @@ import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
-  AxiosHeaders, // 🔥 QUAN TRỌNG
+  AxiosHeaders,
 } from "axios";
 
 export const API_BASE =
   import.meta.env.VITE_API_URL ||
   "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
 
-/**
- * Singleton axios instance
- */
 let _api: AxiosInstance | null = null;
 
 export function api(): AxiosInstance {
@@ -23,15 +20,12 @@ export function api(): AxiosInstance {
     withCredentials: false,
   });
 
-  // =========================
-  // Request interceptor
-  // =========================
   _api.interceptors.request.use(
     (cfg: InternalAxiosRequestConfig) => {
       const token = localStorage.getItem("access_token");
       const tenantId = localStorage.getItem("tenant_id");
 
-      // ✅ FIX TS2322 – CHUẨN AXIOS v1
+      // ✅ DUY NHẤT CÁCH ĐÚNG
       if (!cfg.headers) {
         cfg.headers = new AxiosHeaders();
       }
@@ -49,9 +43,6 @@ export function api(): AxiosInstance {
     (err: AxiosError) => Promise.reject(err)
   );
 
-  // =========================
-  // Response interceptor
-  // =========================
   _api.interceptors.response.use(
     (res) => res,
     (err: AxiosError) => {
