@@ -2,7 +2,7 @@ import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
-  AxiosRequestHeaders,
+  AxiosHeaders, // 🔥 QUAN TRỌNG
 } from "axios";
 
 export const API_BASE =
@@ -11,7 +11,6 @@ export const API_BASE =
 
 /**
  * Singleton axios instance
- * Giữ nguyên cách gọi api().get(...) ở toàn bộ project
  */
 let _api: AxiosInstance | null = null;
 
@@ -32,19 +31,17 @@ export function api(): AxiosInstance {
       const token = localStorage.getItem("access_token");
       const tenantId = localStorage.getItem("tenant_id");
 
-      // ✅ FIX TS2322 (điểm mấu chốt)
-      cfg.headers = {
-        ...(cfg.headers || {}),
-      } as AxiosRequestHeaders;
-
-      // JWT
-      if (token) {
-        cfg.headers.Authorization = `Bearer ${token}`;
+      // ✅ FIX TS2322 – CHUẨN AXIOS v1
+      if (!cfg.headers) {
+        cfg.headers = new AxiosHeaders();
       }
 
-      // Tenant (KHÔNG hardcode)
+      if (token) {
+        cfg.headers.set("Authorization", `Bearer ${token}`);
+      }
+
       if (tenantId) {
-        cfg.headers["X-Tenant-ID"] = tenantId;
+        cfg.headers.set("X-Tenant-ID", tenantId);
       }
 
       return cfg;
