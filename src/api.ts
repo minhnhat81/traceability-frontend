@@ -9,10 +9,6 @@ export const API_BASE =
   import.meta.env.VITE_API_URL ||
   "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
 
-/**
- * Singleton axios instance
- * Giữ nguyên cách gọi api().get(...) ở toàn bộ project
- */
 let _api: AxiosInstance | null = null;
 
 export function api(): AxiosInstance {
@@ -32,15 +28,20 @@ export function api(): AxiosInstance {
       const token = localStorage.getItem("access_token");
       const tenantId = localStorage.getItem("tenant_id");
 
-      // ✅ Axios v1: đảm bảo headers luôn là AxiosHeaders (KHÔNG BAO GIỜ gán {})
-      const headers = cfg.headers
-        ? AxiosHeaders.from(cfg.headers)
-        : new AxiosHeaders();
+      // 🔑 FIX TS: luôn dùng AxiosHeaders
+      cfg.headers =
+        cfg.headers instanceof AxiosHeaders
+          ? cfg.headers
+          : new AxiosHeaders(cfg.headers);
 
-      if (token) headers.set("Authorization", `Bearer ${token}`);
-      if (tenantId) headers.set("X-Tenant-ID", tenantId);
+      if (token) {
+        cfg.headers.set("Authorization", `Bearer ${token}`);
+      }
 
-      cfg.headers = headers;
+      if (tenantId) {
+        cfg.headers.set("X-Tenant-ID", tenantId);
+      }
+
       return cfg;
     },
     (err: AxiosError) => Promise.reject(err)
@@ -55,6 +56,7 @@ export function api(): AxiosInstance {
       if (err.response?.status === 401) {
         localStorage.removeItem("access_token");
         localStorage.removeItem("tenant_id");
+        localStorage.removeItem("user");
         window.location.href = "/login";
       }
       return Promise.reject(err);

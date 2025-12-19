@@ -1,98 +1,88 @@
 import { create } from "zustand";
 
-type Tenant = { id: number; name?: string };
+/* =========================
+   Types
+========================= */
 type User = {
-  id?: number;
-  email?: string;
-  name?: string;
-  role?: string;
   username?: string;
+  email?: string;
+  role?: string;
   tenant_id?: number;
 };
 
 type AuthState = {
-  token: string;
-  tenant: Tenant | null;
+  token: string | null;
   user: User | null;
   authInitialized: boolean;
 
-  setToken: (t: string) => void;
-  setTenant: (t: Tenant) => void;
-  setUser: (u: User | null) => void;
+  setAuth: (token: string, user?: User, tenantId?: number) => void;
   clearAuth: () => void;
   initAuth: () => void;
 };
 
-// ---- helper: decode JWT (base64url) an toàn ----
+/* =========================
+   JWT decode helper
+========================= */
 function decodeJwt<T = any>(token?: string | null): T | null {
   if (!token) return null;
   const parts = token.split(".");
   if (parts.length < 2) return null;
+
   try {
     const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const json = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(json) as T;
+    return JSON.parse(atob(base64));
   } catch {
     return null;
   }
 }
 
+/* =========================
+   Store
+========================= */
 export const useAuth = create<AuthState>((set) => ({
-  token: "",
-  tenant: null,
+  token: null,
   user: null,
   authInitialized: false,
 
-  setToken: (t) => {
-    localStorage.setItem("token", t);
-    set({ token: t });
-  },
+  setAuth: (token, user, tenantId) => {
+    localStorage.setItem("access_token", token);
 
-  setTenant: (tenant) => {
-    if (tenant) localStorage.setItem("tenant", JSON.stringify(tenant));
-    else localStorage.removeItem("tenant");
-    set({ tenant });
-  },
+    if (tenantId) {
+      localStorage.setItem("tenant_id", String(tenantId));
+    }
 
-  setUser: (user) => {
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
-      if (user.role) localStorage.setItem("role", user.role);
-    } else {
-      localStorage.removeItem("user");
-      localStorage.removeItem("role");
     }
-    set({ user });
+
+    set({ token, user });
   },
 
   clearAuth: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("tenant");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("tenant_id");
     localStorage.removeItem("user");
-    localStorage.removeItem("role");
-    set({ token: "", tenant: null, user: null });
+    set({ token: null, user: null });
   },
 
   initAuth: () => {
     try {
-      const token = localStorage.getItem("token") || "";
-      const tenant = JSON.parse(localStorage.getItem("tenant") || "null");
-      let user = JSON.parse(localStorage.getItem("user") || "null");
+      const token = localStorage.getItem("access_token");
+      let user: User | null = null;
 
-      // 🔁 Nếu chưa có user trong LS, decode từ JWT
-      if (!user && token) {
+      const userRaw = localStorage.getItem("user");
+      if (userRaw) {
+        user = JSON.parse(userRaw);
+      } else if (token) {
         const payload = decodeJwt<any>(token);
         if (payload) {
           user = {
-            username: payload.username || payload.name || payload.sub || "User",
+            username: payload.username || payload.sub,
             email: payload.email,
             role:
-              (payload.role || payload.roles || payload["x-role"] || "").toString(),
+              payload.role ||
+              payload.roles ||
+              payload["x-role"],
             tenant_id:
               Number(
                 payload.tenant_id ||
@@ -100,26 +90,23 @@ export const useAuth = create<AuthState>((set) => ({
                   payload["x-tenant-id"]
               ) || undefined,
           };
-          localStorage.setItem("user", JSON.stringify(user));
-          if (user.role) localStorage.setItem("role", user.role);
-        }
-      }
 
-      // fallback role nếu chỉ có key role lẻ
-      if (!user) {
-        const role = localStorage.getItem("role");
-        if (role) user = { username: "User", role };
+          localStorage.setItem("user", JSON.stringify(user));
+
+          if (user.tenant_id) {
+            localStorage.setItem("tenant_id", String(user.tenant_id));
+          }
+        }
       }
 
       set({
         token,
-        tenant,
         user,
         authInitialized: true,
       });
     } catch (e) {
       console.error("initAuth error:", e);
-      set({ token: "", tenant: null, user: null, authInitialized: true });
+      set({ token: null, user: null, authInitialized: true });
     }
   },
 }));

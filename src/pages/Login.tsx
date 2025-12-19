@@ -5,7 +5,8 @@ import { useAuth } from "../store/auth";
 import { api } from "../api";
 
 export default function Login() {
-  const { setToken } = useAuth();
+  const { setAuth } = useAuth();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,23 +17,23 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
-    console.log("LOGIN JSON VERSION 2025-01-15"); // 👈 để verify build
-
     try {
-      const res = await api().post(
-        "/auth/login",
-        {
-          username,
-          password,
-        }
-      );
+      const res = await api().post("/auth/login", {
+        username,
+        password,
+      });
 
-      if (res.data?.access_token) {
-        setToken(res.data.access_token);
-        window.location.href = "/";
-      } else {
+      const token = res.data?.access_token;
+      if (!token) {
         setError("Sai thông tin đăng nhập");
+        return;
       }
+
+      // tenant_id có thể trả riêng hoặc nằm trong JWT
+      const tenantId = res.data?.tenant_id;
+
+      setAuth(token, undefined, tenantId);
+      window.location.href = "/";
     } catch (err: any) {
       console.error("LOGIN ERROR:", err?.response?.data || err);
       setError("Không thể đăng nhập. Vui lòng kiểm tra lại.");
@@ -54,7 +55,6 @@ export default function Login() {
               Tên đăng nhập
             </label>
             <Input
-              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
