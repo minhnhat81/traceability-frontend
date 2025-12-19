@@ -9,6 +9,10 @@ export const API_BASE =
   import.meta.env.VITE_API_URL ||
   "https://tracebility-backend-v2-7a55d0dee97d.herokuapp.com";
 
+/**
+ * Singleton axios instance
+ * Giữ nguyên cách gọi api().get(...) ở toàn bộ project
+ */
 let _api: AxiosInstance | null = null;
 
 export function api(): AxiosInstance {
@@ -20,29 +24,31 @@ export function api(): AxiosInstance {
     withCredentials: false,
   });
 
+  // =========================
+  // Request interceptor
+  // =========================
   _api.interceptors.request.use(
     (cfg: InternalAxiosRequestConfig) => {
       const token = localStorage.getItem("access_token");
       const tenantId = localStorage.getItem("tenant_id");
 
-      // ✅ DUY NHẤT CÁCH ĐÚNG
-      if (!cfg.headers) {
-        cfg.headers = new AxiosHeaders();
-      }
+      // ✅ Axios v1: đảm bảo headers luôn là AxiosHeaders (KHÔNG BAO GIỜ gán {})
+      const headers = cfg.headers
+        ? AxiosHeaders.from(cfg.headers)
+        : new AxiosHeaders();
 
-      if (token) {
-        cfg.headers.set("Authorization", `Bearer ${token}`);
-      }
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      if (tenantId) headers.set("X-Tenant-ID", tenantId);
 
-      if (tenantId) {
-        cfg.headers.set("X-Tenant-ID", tenantId);
-      }
-
+      cfg.headers = headers;
       return cfg;
     },
     (err: AxiosError) => Promise.reject(err)
   );
 
+  // =========================
+  // Response interceptor
+  // =========================
   _api.interceptors.response.use(
     (res) => res,
     (err: AxiosError) => {
