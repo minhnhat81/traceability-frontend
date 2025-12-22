@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
-import { hashPdf } from "../utils/hashPdf";
+import { hashPdf, hashPdfBlob } from "../utils/hashPdf";
+
 
 export async function exportDppPdfWithHash(data: any) {
   const doc = new jsPDF();
