@@ -30,6 +30,7 @@ import RepairRecyclePage from "./customer/RepairRecyclePage";
 import BlockchainProofPage from "./customer/BlockchainProofPage";
 import PublicDppPage from "../pages/PublicDppPage";
 import PublicQRRedirect from "../pages/PublicQRRedirect";
+import PublicConsumerDppPage from "../pages/PublicConsumerDppPage";
 
 
 export default function App() {
@@ -113,6 +114,8 @@ export default function App() {
               <Route path="/dpp/:refId" element={<DppPage />} />
               <Route path="/dpp/:refId" element={<PublicQRRedirect />} />
               <Route path="*" element={<Navigate to="/" />} />
+              <Route path="/dpp/:refId" element={<PublicConsumerDppPage />}
+/>
             </Routes>
           </AppLayout>
         ) : (
