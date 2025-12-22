@@ -92,7 +92,7 @@ export default function DppLandingPage({
     data.batch.quantity != null
       ? `${data.batch.quantity} ${data.batch.unit || ""}`
       : "-";
-
+  console.log("🔥🔥🔥 DppLandingPage RENDERED 🔥🔥🔥");
   const tiers = useMemo(
     () => summarizeEvents(allEvents),
     [allEvents]
