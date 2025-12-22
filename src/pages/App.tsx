@@ -28,7 +28,6 @@ import MapViewPage from "./customer/MapViewPage";
 import CertificationsPage from "./customer/CertificationsPage";
 import RepairRecyclePage from "./customer/RepairRecyclePage";
 import BlockchainProofPage from "./customer/BlockchainProofPage";
-import PublicDppPage from "../pages/PublicDppPage";
 import PublicQRRedirect from "../pages/PublicQRRedirect";
 import PublicConsumerDppPage from "../pages/PublicConsumerDppPage";
 
@@ -57,10 +56,6 @@ export default function App() {
       element={token ? <Navigate to="/" replace /> : <Login />}
     />
 
-    <Route
-      path="/public/dpp/:refId"
-      element={<PublicDppPage />}   // ⭐ QUAN TRỌNG
-    />
 
     <Route
       path="/consumer/scan"
