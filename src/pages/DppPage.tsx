@@ -11,6 +11,8 @@ import {
   Tag,
   Typography,
   Table,
+  Button,
+  Collapse,
 } from "antd";
 import QRCode from "react-qr-code";
 import { useParams } from "react-router-dom";
@@ -25,8 +27,12 @@ import DIDViewer from "../components/DIDViewer";
 
 // Types
 import { DppResponse, EventItem, DocumentItem } from "../types/dpp";
+// Landing page
+import DppLandingPage from "./DppLandingPage";
+
 
 const { Title, Text } = Typography;
+const { Panel } = Collapse;
 
 /* ======================
    Helpers
@@ -416,8 +422,25 @@ export default function DppPage() {
   // Lấy ref từ URL param /dpp/:refId hoặc query ?ref
   const params = useParams<{ refId?: string }>();
   const searchParams = new URLSearchParams(window.location.search);
+  const view = searchParams.get("view");
+  const isTechView = view === "tech";
   const refFromQuery = searchParams.get("ref") || "";
   const ref = params.refId || refFromQuery || "";
+
+  const isMobile = typeof window !== "undefined" ? window.innerWidth < 768 : false;
+  const ALL_COLLAPSE_KEYS = [
+    "product",
+    "blockchain",
+    "epcis",
+    "graph",
+    "merkle",
+    "documents",
+    "did",
+  ];
+  const DEFAULT_OPEN_KEYS = isMobile ? [] : ["product", "blockchain"];
+  const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(DEFAULT_OPEN_KEYS);
+  const expandAll = () => setActiveCollapseKeys(ALL_COLLAPSE_KEYS);
+  const collapseAll = () => setActiveCollapseKeys([]);
 
   /* ======================
       Load data from API
@@ -678,7 +701,7 @@ export default function DppPage() {
   ========================= */
   if (!ref) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: isMobile ? 12 : 24 }}>
         <Alert
           type="error"
           message="Missing DPP reference"
@@ -725,190 +748,257 @@ export default function DppPage() {
 
         {!loading && data && (
           <>
-            {/* PRODUCT + BATCH */}
-            <Card title="Product & Batch Information">
-              <Descriptions bordered size="small" column={2}>
-                <Descriptions.Item label="Product Name">
-                  {data.batch.product?.name || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Brand">
-                  {data.batch.product?.brand || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="GTIN">
-                  {data.batch.product?.gtin || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Product Code">
-                  {data.batch.product_code || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Batch Code" span={2}>
-                  <Text code>{data.batch.batch_code}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Mfg Date">
-                  {safeDate(data.batch.mfg_date)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Country">
-                  {data.batch.country || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Quantity">
-                  {data.batch.quantity != null
-                    ? `${data.batch.quantity} ${data.batch.unit || ""}`
-                    : "-"}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
+            {/* ================= VIEW SWITCH ================= */}
+            <Space>
+              {isTechView ? (
+                <Button href={window.location.pathname}>← Consumer view</Button>
+              ) : (
+                <Button type="link" href={`${window.location.pathname}?view=tech`}>
+                  View technical details →
+                </Button>
+              )}
+            </Space>
 
-            {/* BLOCKCHAIN */}
-            <Card title="Blockchain Proof" style={{ marginTop: 16 }}>
-              <Space direction="vertical" size="small">
-                <Space>
-                  <Text>Network:</Text>
-                  <Tag>{data.blockchain.network || "-"}</Tag>
-                </Space>
-                <Space>
-                  <Text>Status:</Text>
-                  <Tag
-                    color={
-                      data.blockchain.status === "CONFIRMED"
-                        ? "green"
-                        : data.blockchain.status === "PENDING"
-                        ? "blue"
-                        : "red"
-                    }
-                  >
-                    {data.blockchain.status || "UNKNOWN"}
-                  </Tag>
-                </Space>
-                <Space align="start">
-                  <Text>Tx Hash:</Text>
-                  {data.blockchain.tx_hash ? (
-                    <a
-                      href={`https://amoy.polygonscan.com/tx/${data.blockchain.tx_hash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ wordBreak: "break-all" }}
-                    >
-                      {data.blockchain.tx_hash}
-                    </a>
-                  ) : (
-                    "-"
-                  )}
-                </Space>
-                <Space>
-                  <Text>Block:</Text>
-                  <Text>{data.blockchain.block_number ?? "-"}</Text>
-                </Space>
-                <Space align="start">
-                  <Text>Root Hash:</Text>
-                  {data.blockchain.root_hash ? (
-                    <Text code style={{ fontSize: 12 }}>
-                      {data.blockchain.root_hash}
-                    </Text>
-                  ) : (
-                    "-"
-                  )}
-                </Space>
-                <Space align="start">
-                  <Text>IPFS:</Text>
-                  {data.blockchain.ipfs_cid ? (
-                    <a
-                      href={
-                        data.blockchain.ipfs_gateway ||
-                        `https://ipfs.io/ipfs/${data.blockchain.ipfs_cid}`
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {data.blockchain.ipfs_cid}
-                    </a>
-                  ) : (
-                    <Text type="secondary">Not uploaded</Text>
-                  )}
-                </Space>
-                <Space>
-                  <Text>Anchored At:</Text>
-                  <Text>{safeDate(data.blockchain.created_at)}</Text>
-                </Space>
-              </Space>
-            </Card>
-
-            {/* EPCIS Timeline + Table — MỖI TẦNG 1 BOX, EPCIS + DPP CÙNG DÒNG */}
-            <Card
-              title="EPCIS Event Timeline"
-              style={{ marginTop: 16 }}
-              extra={
-                <Text type="secondary">
-                  Total: {allEvents.length} events
-                </Text>
-              }
+            {/* ================= STICKY TRUST HEADER (MOBILE-FIRST) ================= */}
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 100,
+                background: "#fff",
+                padding: isMobile ? "8px 12px" : "12px 24px",
+                borderBottom: "1px solid #f0f0f0",
+                marginBottom: 16,
+              }}
             >
-              <Space
-                direction="vertical"
-                size="middle"
-                style={{ width: "100%" }}
-              >
-                {tierGroups.map((tier) => (
-                  <Card
-                    key={tier.key}
-                    size="small"
-                    style={{ width: "100%" }}
-                    bodyStyle={{ paddingTop: 8 }}
-                    title={
-                      <Space>
-                        <Tag color={tier.color}>{tier.label}</Tag>
-                        <Text type="secondary">
-                          {tier.events.length} event
-                          {tier.events.length > 1 ? "s" : ""}
-                        </Text>
-                      </Space>
-                    }
-                  >
-                    <Table<EventItem>
-                      rowKey={(r, index) => r.event_id || `ev-${index}`}
-                      size="small"
-                      columns={baseEventsColumns as any}
-                      dataSource={tier.events}
-                      pagination={{ pageSize: 5 }}
-                      scroll={{ x: 1600 }}
-                    />
-                  </Card>
-                ))}
-
-                {!tierGroups.length && (
-                  <Text type="secondary">
-                    No EPCIS events found for this batch.
-                  </Text>
+              <Space wrap size="small">
+                <Text strong>{data.batch.product?.name || "Product"}</Text>
+                <Tag color="green">Verified</Tag>
+                {data.blockchain.status === "CONFIRMED" && (
+                  <Tag color="blue">On blockchain</Tag>
                 )}
+                {data.blockchain.ipfs_cid && <Tag color="purple">IPFS</Tag>}
               </Space>
-            </Card>
+            </div>
 
-            {/* EPCIS Graph */}
-            <EPCISGraph events={graphEvents} />
+            {/* ================= MAIN VIEW ================= */}
+            {isTechView ? (
+              <>
+                {/* ===== TECH CONTROLS ===== */}
+                <Space style={{ marginBottom: 12 }} wrap>
+                  <Button size="small" onClick={expandAll}>
+                    Expand all
+                  </Button>
+                  <Button size="small" onClick={collapseAll}>
+                    Collapse all
+                  </Button>
+                </Space>
 
-            {/* MERKLE TREE */}
-            <MerkleViewer
+                <Collapse
+                  activeKey={activeCollapseKeys}
+                  onChange={(k) => setActiveCollapseKeys(k as string[])}
+                  ghost
+                >
+                  <Panel header="🧾 Product & Batch Information" key="product">
+                                <Card title="Product & Batch Information">
+                                  <Descriptions bordered size="small" column={isMobile ? 1 : 2}>
+                                    <Descriptions.Item label="Product Name">
+                                      {data.batch.product?.name || "-"}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Brand">
+                                      {data.batch.product?.brand || "-"}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="GTIN">
+                                      {data.batch.product?.gtin || "-"}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Product Code">
+                                      {data.batch.product_code || "-"}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Batch Code" span={2}>
+                                      <Text code>{data.batch.batch_code}</Text>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Mfg Date">
+                                      {safeDate(data.batch.mfg_date)}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Country">
+                                      {data.batch.country || "-"}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Quantity">
+                                      {data.batch.quantity != null
+                                        ? `${data.batch.quantity} ${data.batch.unit || ""}`
+                                        : "-"}
+                                    </Descriptions.Item>
+                                  </Descriptions>
+                                </Card>
+                  </Panel>
+
+                  <Panel header="⛓️ Blockchain Proof" key="blockchain">
+                                <Card title="Blockchain Proof" style={{ marginTop: 16 }}>
+                                  <Space direction="vertical" size="small">
+                                    <Space>
+                                      <Text>Network:</Text>
+                                      <Tag>{data.blockchain.network || "-"}</Tag>
+                                    </Space>
+                                    <Space>
+                                      <Text>Status:</Text>
+                                      <Tag
+                                        color={
+                                          data.blockchain.status === "CONFIRMED"
+                                            ? "green"
+                                            : data.blockchain.status === "PENDING"
+                                            ? "blue"
+                                            : "red"
+                                        }
+                                      >
+                                        {data.blockchain.status || "UNKNOWN"}
+                                      </Tag>
+                                    </Space>
+                                    <Space align="start">
+                                      <Text>Tx Hash:</Text>
+                                      {data.blockchain.tx_hash ? (
+                                        <a
+                                          href={`https://amoy.polygonscan.com/tx/${data.blockchain.tx_hash}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          style={{ wordBreak: "break-all" }}
+                                        >
+                                          {data.blockchain.tx_hash}
+                                        </a>
+                                      ) : (
+                                        "-"
+                                      )}
+                                    </Space>
+                                    <Space>
+                                      <Text>Block:</Text>
+                                      <Text>{data.blockchain.block_number ?? "-"}</Text>
+                                    </Space>
+                                    <Space align="start">
+                                      <Text>Root Hash:</Text>
+                                      {data.blockchain.root_hash ? (
+                                        <Text code style={{ fontSize: 12 }}>
+                                          {data.blockchain.root_hash}
+                                        </Text>
+                                      ) : (
+                                        "-"
+                                      )}
+                                    </Space>
+                                    <Space align="start">
+                                      <Text>IPFS:</Text>
+                                      {data.blockchain.ipfs_cid ? (
+                                        <a
+                                          href={
+                                            data.blockchain.ipfs_gateway ||
+                                            `https://ipfs.io/ipfs/${data.blockchain.ipfs_cid}`
+                                          }
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          {data.blockchain.ipfs_cid}
+                                        </a>
+                                      ) : (
+                                        <Text type="secondary">Not uploaded</Text>
+                                      )}
+                                    </Space>
+                                    <Space>
+                                      <Text>Anchored At:</Text>
+                                      <Text>{safeDate(data.blockchain.created_at)}</Text>
+                                    </Space>
+                                  </Space>
+                                </Card>
+                  </Panel>
+
+                  <Panel
+                    header={`📦 EPCIS Event Timeline (${allEvents.length} events)`}
+                    key="epcis"
+                  >
+                                <Card
+                                  title="EPCIS Event Timeline"
+                                  style={{ marginTop: 16 }}
+                                  extra={
+                                    <Text type="secondary">
+                                      Total: {allEvents.length} events
+                                    </Text>
+                                  }
+                                >
+                                  <Space
+                                    direction="vertical"
+                                    size="middle"
+                                    style={{ width: "100%" }}
+                                  >
+                                    {tierGroups.map((tier) => (
+                                      <Card
+                                        key={tier.key}
+                                        size="small"
+                                        style={{ width: "100%" }}
+                                        bodyStyle={{ paddingTop: 8 }}
+                                        title={
+                                          <Space>
+                                            <Tag color={tier.color}>{tier.label}</Tag>
+                                            <Text type="secondary">
+                                              {tier.events.length} event
+                                              {tier.events.length > 1 ? "s" : ""}
+                                            </Text>
+                                          </Space>
+                                        }
+                                      >
+                                        <Table<EventItem>
+                                          rowKey={(r, index) => r.event_id || `ev-${index}`}
+                                          size="small"
+                                          columns={baseEventsColumns as any}
+                                          dataSource={tier.events}
+                                          pagination={{ pageSize: 5 }}
+                                          scroll={{ x: 1600 }}
+                                        />
+                                      </Card>
+                                    ))}
+
+                                    {!tierGroups.length && (
+                                      <Text type="secondary">
+                                        No EPCIS events found for this batch.
+                                      </Text>
+                                    )}
+                                  </Space>
+                                </Card>
+                  </Panel>
+
+                  <Panel header="📈 EPCIS Graph" key="graph">
+                    <EPCISGraph events={graphEvents} />
+                  </Panel>
+
+                  <Panel header="🌳 Merkle Tree Verification" key="merkle">
+                    <MerkleViewer
               events={allEvents}
               documents={data.documents}
               rootHash={data.blockchain.root_hash}
             />
+                  </Panel>
 
-            {/* DOCUMENTS */}
-            <Card title="Documents & Credentials" style={{ marginTop: 16 }}>
-              <Table<DocumentItem>
-                rowKey="id"
-                size="small"
-                columns={docsColumns as any}
-                dataSource={data.documents}
-                pagination={{ pageSize: 5 }}
-              />
-            </Card>
+                  <Panel header="📄 Documents & Credentials" key="documents">
+                                <Card title="Documents & Credentials" style={{ marginTop: 16 }}>
+                                  <Table<DocumentItem>
+                                    rowKey="id"
+                                    size="small"
+                                    columns={docsColumns as any}
+                                    dataSource={data.documents}
+                                    pagination={{ pageSize: 5 }}
+                                    scroll={isMobile ? { x: 700 } : undefined}
+                                  />
+                                </Card>
+                  </Panel>
 
-            {/* DID VIEW */}
-            <DIDViewer
+                  <Panel header="🆔 DID View" key="did">
+                    <DIDViewer
               initialDid={
                 (data.events?.[0]?.ilmd as any)?.dpp?.digital_identity?.did ||
                 null
               }
             />
+                  </Panel>
+                </Collapse>
+              </>
+            ) : (
+              <DppLandingPage data={data} allEvents={allEvents} />
+            )}
           </>
         )}
       </Space>
