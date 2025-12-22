@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../store/auth";
 import AppLayout from "../components/layout/AppLayout";
 
-// Pages
+// ================= AUTH & ADMIN PAGES =================
 import Login from "../pages/Login";
 import Users from "../pages/Users";
 import Dashboard from "../pages/Dashboard";
@@ -19,9 +19,10 @@ import BlockchainSettings from "../pages/BlockchainSettings";
 import Farms from "../pages/suppliers/farms/Farms";
 import Suppliers from "../pages/Suppliers";
 import DPPTemplates from "../pages/DPPTemplates";
-import MaterialPage from "../pages/Materials"; // ✅ Sửa lại import này
-import DppPage from "../pages/DppPage";
+import MaterialPage from "../pages/Materials";
 import DppListPage from "../pages/DppListPage";
+
+// ================= PUBLIC / CONSUMER =================
 import QRScanPage from "./customer/QRScanPage";
 import ProductInfoPage from "./customer/ProductInfoPage";
 import MapViewPage from "./customer/MapViewPage";
@@ -30,7 +31,6 @@ import RepairRecyclePage from "./customer/RepairRecyclePage";
 import BlockchainProofPage from "./customer/BlockchainProofPage";
 import PublicQRRedirect from "../pages/PublicQRRedirect";
 import PublicConsumerDppPage from "../pages/PublicConsumerDppPage";
-
 
 export default function App() {
   const { token, authInitialized, initAuth } = useAuth();
@@ -48,78 +48,75 @@ export default function App() {
   }
 
   return (
-  <Routes>
-    {/* ================= PUBLIC ROUTES ================= */}
+    <Routes>
+      {/* ======================================================
+          PUBLIC ROUTES (KHÔNG QUA AppLayout)
+      ====================================================== */}
 
-    <Route
-      path="/login"
-      element={token ? <Navigate to="/" replace /> : <Login />}
-    />
+      {/* Login */}
+      <Route
+        path="/login"
+        element={token ? <Navigate to="/" replace /> : <Login />}
+      />
 
+      {/* PUBLIC DPP – LANDING PAGE (QUAN TRỌNG NHẤT) */}
+      <Route
+        path="/dpp/:refId"
+        element={<PublicConsumerDppPage />}
+      />
 
-    <Route
-      path="/consumer/scan"
-      element={<QRScanPage />}
-    />
-    <Route
-      path="/consumer/product"
-      element={<ProductInfoPage />}
-    />
-    <Route
-      path="/consumer/map"
-      element={<MapViewPage />}
-    />
-    <Route
-      path="/consumer/certifications"
-      element={<CertificationsPage />}
-    />
-    <Route
-      path="/consumer/repair"
-      element={<RepairRecyclePage />}
-    />
-    <Route
-      path="/consumer/blockchain-proof"
-      element={<BlockchainProofPage />}
-    />
+      {/* QR redirect (nếu scan QR ngoài hệ thống) */}
+      <Route
+        path="/qr/:refId"
+        element={<PublicQRRedirect />}
+      />
 
-    {/* ================= ADMIN ROUTES ================= */}
+      {/* Consumer mini pages */}
+      <Route path="/consumer/scan" element={<QRScanPage />} />
+      <Route path="/consumer/product" element={<ProductInfoPage />} />
+      <Route path="/consumer/map" element={<MapViewPage />} />
+      <Route path="/consumer/certifications" element={<CertificationsPage />} />
+      <Route path="/consumer/repair" element={<RepairRecyclePage />} />
+      <Route path="/consumer/blockchain-proof" element={<BlockchainProofPage />} />
 
-    <Route
-      path="/*"
-      element={
-        token ? (
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/batches" element={<Batches />} />
-              <Route path="/epcis-events" element={<EPCISEvents />} />
-              <Route path="/epcis/capture" element={<EPCISCapture />} />
-              <Route path="/documents" element={<DocumentsVC />} />
-              <Route path="/observer" element={<Observer />} />
-              <Route path="/configs" element={<Configs />} />
-              <Route path="/batch" element={<BatchDetail />} />
-              <Route path="/configs_blockchain" element={<BlockchainSettings />} />
-              <Route path="/supplier/farms" element={<Farms />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/suppliers" element={<Suppliers />} />
-              <Route path="/dpp_templates" element={<DPPTemplates />} />
-              <Route path="/material" element={<MaterialPage />} />
-              <Route path="/dpp_list" element={<DppListPage />} />
-              <Route path="/dpp/:refId" element={<DppPage />} />
-              <Route path="/dpp/:refId" element={<PublicQRRedirect />} />
-              <Route path="*" element={<Navigate to="/" />} />
-              <Route path="/dpp/:refId" element={<PublicConsumerDppPage />}
-/>
-            </Routes>
-          </AppLayout>
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      }
-    />
-  </Routes>
-);
+      {/* ======================================================
+          ADMIN ROUTES (CÓ AppLayout)
+      ====================================================== */}
+      <Route
+        path="/*"
+        element={
+          token ? (
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/batches" element={<Batches />} />
+                <Route path="/epcis-events" element={<EPCISEvents />} />
+                <Route path="/epcis/capture" element={<EPCISCapture />} />
+                <Route path="/documents" element={<DocumentsVC />} />
+                <Route path="/observer" element={<Observer />} />
+                <Route path="/configs" element={<Configs />} />
+                <Route path="/batch" element={<BatchDetail />} />
+                <Route
+                  path="/configs_blockchain"
+                  element={<BlockchainSettings />}
+                />
+                <Route path="/supplier/farms" element={<Farms />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/dpp_templates" element={<DPPTemplates />} />
+                <Route path="/material" element={<MaterialPage />} />
+                <Route path="/dpp_list" element={<DppListPage />} />
 
+                {/* fallback */}
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </AppLayout>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+    </Routes>
+  );
 }
-
