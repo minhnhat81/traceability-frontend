@@ -29,6 +29,7 @@ import CertificationsPage from "./customer/CertificationsPage";
 import RepairRecyclePage from "./customer/RepairRecyclePage";
 import BlockchainProofPage from "./customer/BlockchainProofPage";
 import PublicDppPage from "../pages/PublicDppPage";
+import PublicQRRedirect from "../pages/PublicQRRedirect";
 
 
 export default function App() {
@@ -56,7 +57,7 @@ export default function App() {
     />
 
     <Route
-      path="/dpp/:refId"
+      path="/public/dpp/:refId"
       element={<PublicDppPage />}   // ⭐ QUAN TRỌNG
     />
 
@@ -109,6 +110,8 @@ export default function App() {
               <Route path="/dpp_templates" element={<DPPTemplates />} />
               <Route path="/material" element={<MaterialPage />} />
               <Route path="/dpp_list" element={<DppListPage />} />
+              <Route path="/dpp/:refId" element={<DppPage />} />
+              <Route path="/dpp/:refId" element={<PublicQRRedirect />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </AppLayout>
