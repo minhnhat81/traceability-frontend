@@ -144,6 +144,8 @@ export default function DppLandingPage({
         maxWidth: 980,
         margin: "0 auto",
         padding: isMobile ? 12 : 24,
+        border: "5px solid red",   // 👈 thêm
+        background: "#fffbe6",     // 👈 thêm
       }}
     >
       {/* ================= HERO ================= */}
