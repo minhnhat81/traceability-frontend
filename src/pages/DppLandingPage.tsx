@@ -19,6 +19,8 @@ import EPCISGraph from "../components/EPCISGraph";
 import MerkleViewer from "../components/MerkleViewer";
 import DIDViewer from "../components/DIDViewer";
 import DppSection from "../components/dpp/DppSection";
+import ConsumerEventTimeline from "../components/dpp/ConsumerEventTimeline";
+
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -361,16 +363,16 @@ export default function DppLandingPage({
         </Panel>
 
         {/* EPCIS Summary */}
-        <Panel
-          header={`📦 Product journey (${allEvents.length} events)`}
-          key="journey"
-        >
-          <Text type="secondary">
-            This product has passed through the
-            supply chain from raw materials to
-            finished goods.
-          </Text>
-        </Panel>
+        {/* EPCIS Summary */}
+<Panel
+  header={`📦 Product journey (${allEvents.length} events)`}
+  key="journey"
+>
+  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+    <ConsumerEventTimeline events={allEvents} />
+  </Space>
+</Panel>
+
 
         {/* EPCIS Graph */}
         <Panel header="📈 Traceability graph" key="graph">
