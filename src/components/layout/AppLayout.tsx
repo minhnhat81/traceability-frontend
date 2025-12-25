@@ -3,19 +3,13 @@ import { Outlet } from "react-router-dom";
 import Topbar from "../../components/Topbar";
 import Sidebar from "../../components/Sidebar";
 
-export default function AppLayout({
-  children,
-}: {
-  children?: React.ReactNode;
-}) {
+export default function AppLayout({ children }: { children?: React.ReactNode }) {
   const [openSidebar, setOpenSidebar] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* TOP BAR */}
-      <Topbar
-        onToggleSidebar={() => setOpenSidebar((prev) => !prev)}
-      />
+      <Topbar onMenuClick={() => setOpenSidebar(true)} />
 
       <div className="flex flex-1 relative">
         {/* ===== SIDEBAR DESKTOP ===== */}
@@ -23,7 +17,7 @@ export default function AppLayout({
           <Sidebar />
         </div>
 
-        {/* ===== SIDEBAR MOBILE (DRAWER STYLE) ===== */}
+        {/* ===== SIDEBAR MOBILE ===== */}
         {openSidebar && (
           <div className="fixed inset-0 z-40 flex md:hidden">
             {/* backdrop */}
@@ -34,9 +28,7 @@ export default function AppLayout({
 
             {/* sidebar */}
             <div className="w-64 bg-white border-r p-4 sidebar-scroll">
-              <Sidebar
-                onNavigate={() => setOpenSidebar(false)}
-              />
+              <Sidebar onNavigate={() => setOpenSidebar(false)} />
             </div>
           </div>
         )}
