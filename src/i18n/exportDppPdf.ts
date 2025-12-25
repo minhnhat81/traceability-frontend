@@ -1,63 +1,44 @@
 // src/i18n/exportDppPdf.ts
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import type { DppResponse, EventItem, DocumentItem } from "../types/dpp";
-import { hashPdfBlob } from "../utils/hashPdf";
 
-// Bạn đã có constants này theo hội thoại trước
-// Nếu file của bạn export khác tên, chỉnh lại import cho đúng.
-import { DPP_ANNEX_I_SECTIONS } from "../constants/dppAnnexI";
-
-type ExportOptions = {
-  fileName?: string; // default: DPP_<batch>.pdf
-  locale?: string; // future i18n
+/**
+ * Options for PDF export
+ */
+type ExportPdfOptions = {
+  fileName?: string;
+  title?: string;
+  // future: language, includeDebug, etc.
 };
 
-function safe(v: any, fallback = "-") {
-  if (v === null || v === undefined) return fallback;
+const safeText = (v: any) => {
+  if (v === null || v === undefined) return "-";
   const s = String(v);
-  return s.trim() ? s : fallback;
-}
+  return s.trim().length ? s : "-";
+};
 
-function safeDate(v?: string | null) {
-  return v ? new Date(v).toLocaleString() : "-";
-}
+const safeDate = (v?: string | null) => {
+  if (!v) return "-";
+  try {
+    return new Date(v).toLocaleString();
+  } catch {
+    return String(v);
+  }
+};
 
-function shortHash(v?: string | null) {
+function shortHash(v?: string | null, head = 10, tail = 8) {
   if (!v) return "-";
   const s = String(v);
-  return s.length > 18 ? `${s.slice(0, 10)}…${s.slice(-8)}` : s;
+  return s.length > head + tail + 1 ? `${s.slice(0, head)}…${s.slice(-tail)}` : s;
 }
 
-// Try to get DPP object from different possible locations
-function getRootDpp(data: DppResponse): any {
-  return (
-    (data as any)?.dpp_json?.dpp ||
-    (data as any)?.dpp_json ||
-    (data as any)?.dpp ||
-    (data as any)
-  );
-}
-
-// Get event DPP attached to event (like DppPage did)
-function getEventDpp(ev: EventItem): any {
-  return (
-    ((ev as any)?.ilmd as any)?.dpp ||
-    (ev as any)?.dpp ||
-    ((ev as any)?.extensions as any)?.dpp ||
-    null
-  );
-}
-
+/**
+ * Detect tier from your event fields (same logic as UI)
+ */
 type TierKey = "FARM" | "SUPPLIER" | "MANUFACTURER" | "BRAND" | "UNKNOWN";
 
-function getEventTier(ev: EventItem): TierKey {
-  const rawRole =
-    (ev as any).owner_role ||
-    (ev as any).event_owner_role ||
-    (ev as any).batch_owner_role ||
-    "";
-
+function getEventTier(ev: any): TierKey {
+  const rawRole = ev?.owner_role || ev?.event_owner_role || ev?.batch_owner_role || "";
   const role = String(rawRole || "").toUpperCase();
 
   if (role.includes("FARM")) return "FARM";
@@ -65,325 +46,531 @@ function getEventTier(ev: EventItem): TierKey {
   if (role.includes("MANUFACTURER")) return "MANUFACTURER";
   if (role.includes("BRAND")) return "BRAND";
 
-  const biz = String((ev as any).biz_step || "").toLowerCase();
+  const biz = String(ev?.biz_step || ev?.bizStep || "").toLowerCase();
   if (biz.includes("growing") || biz.includes("planting") || biz.includes("harvesting")) return "FARM";
   if (biz.includes("receiving") || biz.includes("shipping") || biz.includes("packing")) return "SUPPLIER";
 
   return "UNKNOWN";
 }
 
-function groupByTier(events: EventItem[]) {
+function groupEventsByTier(events: EventItem[]) {
   const order: TierKey[] = ["FARM", "SUPPLIER", "MANUFACTURER", "BRAND", "UNKNOWN"];
-  const map: Record<TierKey, EventItem[]> = {
-    FARM: [],
-    SUPPLIER: [],
-    MANUFACTURER: [],
-    BRAND: [],
-    UNKNOWN: [],
-  };
-  events.forEach((e) => map[getEventTier(e)].push(e));
+  const map = new Map<TierKey, EventItem[]>();
+  order.forEach((k) => map.set(k, []));
+
+  events.forEach((ev) => {
+    const tier = getEventTier(ev);
+    map.get(tier)!.push(ev);
+  });
+
   return order
-    .map((k) => ({ tier: k, events: map[k] }))
+    .map((k) => ({ key: k, events: map.get(k)! }))
     .filter((x) => x.events.length > 0);
 }
 
-function tierLabel(t: TierKey) {
-  if (t === "FARM") return "Farm";
-  if (t === "SUPPLIER") return "Supplier";
-  if (t === "MANUFACTURER") return "Manufacturer";
-  if (t === "BRAND") return "Brand";
-  return "Other / Unknown";
-}
-
-function addTitle(doc: jsPDF, title: string, y: number) {
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text(title, 14, y);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-}
-
-function nextY(doc: jsPDF) {
-  // @ts-ignore
-  return (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 8 : 20;
+/**
+ * Get DPP attached to event (same as your DppPage.tsx)
+ */
+function getEventDpp(ev: any): any {
+  return (ev?.ilmd?.dpp || ev?.dpp || ev?.extensions?.dpp || null) ?? null;
 }
 
 /**
- * Export DPP PDF according to "Annex I style sections" via DPP_ANNEX_I_SECTIONS
- * Returns { blob, hash, fileName }
+ * PDF layout helpers
  */
-export async function exportDppPdf(
-  data: DppResponse,
-  allEvents: EventItem[],
-  options: ExportOptions = {}
-): Promise<{ blob: Blob; hash: string; fileName: string }> {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+type PdfCtx = {
+  doc: jsPDF;
+  pageWidth: number;
+  pageHeight: number;
+  margin: number;
+  cursorY: number;
+  lineHeight: number;
+  fontSize: number;
+};
 
-  const dppRoot = getRootDpp(data);
+function initPdf(title: string): PdfCtx {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
-  const productName = safe(data.batch?.product?.name, "Product");
-  const brand = safe(data.batch?.product?.brand);
-  const gtin = safe(data.batch?.product?.gtin);
-  const batchCode = safe(data.batch?.batch_code);
-  const productCode = safe(data.batch?.product_code);
-  const country = safe(data.batch?.country);
-  const mfgDate = safeDate(data.batch?.mfg_date);
-  const quantity =
-    data.batch?.quantity != null ? `${data.batch.quantity} ${safe(data.batch.unit, "")}`.trim() : "-";
-
-  const fileName =
-    options.fileName ||
-    `DPP_${(batchCode || productCode || "BATCH").replace(/[^\w\-]+/g, "_")}.pdf`;
-
-  // =========================
-  // COVER PAGE
-  // =========================
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Digital Product Passport (DPP)", 14, 22);
-
-  doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(`Product: ${productName}`, 14, 34);
-  doc.text(`Brand: ${brand}`, 14, 40);
-  doc.text(`GTIN: ${gtin}`, 14, 46);
-  doc.text(`Product code: ${productCode}`, 14, 52);
-  doc.text(`Batch: ${batchCode}`, 14, 58);
-  doc.text(`Made in: ${country}`, 14, 64);
-  doc.text(`Manufactured: ${mfgDate}`, 14, 70);
-  doc.text(`Quantity: ${quantity}`, 14, 76);
+  doc.setFontSize(16);
+  doc.text(title, 40, 48);
+
+  doc.setFontSize(10);
+  doc.text(`Generated at: ${new Date().toLocaleString()}`, 40, 66);
 
   doc.setDrawColor(220);
-  doc.line(14, 82, 196, 82);
+  doc.line(40, 76, pageWidth - 40, 76);
 
-  doc.setFont("helvetica", "bold");
-  doc.text("Blockchain proof", 14, 90);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Network: ${safe(data.blockchain?.network)}`, 14, 96);
-  doc.text(`Status: ${safe(data.blockchain?.status)}`, 14, 102);
-  doc.text(`Tx hash: ${safe(data.blockchain?.tx_hash)}`, 14, 108);
-  doc.text(`Block: ${safe(data.blockchain?.block_number)}`, 14, 114);
-  doc.text(`Root hash: ${safe(data.blockchain?.root_hash)}`, 14, 120);
-  doc.text(`Anchored at: ${safeDate((data.blockchain as any)?.created_at)}`, 14, 126);
+  return {
+    doc,
+    pageWidth,
+    pageHeight,
+    margin: 40,
+    cursorY: 92,
+    lineHeight: 14,
+    fontSize: 10,
+  };
+}
 
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text("Generated by Traceability Unified Web", 14, 286);
-  doc.setTextColor(0);
+function ensureSpace(ctx: PdfCtx, neededHeight: number) {
+  const bottom = ctx.pageHeight - ctx.margin;
+  if (ctx.cursorY + neededHeight <= bottom) return;
 
-  doc.addPage();
+  ctx.doc.addPage();
+  ctx.cursorY = ctx.margin;
+}
 
-  // =========================
-  // ANNEX I SECTIONS
-  // =========================
-  addTitle(doc, "EU DPP Annex I — Information requirements", 16);
+function addSectionTitle(ctx: PdfCtx, title: string) {
+  ensureSpace(ctx, 28);
+  ctx.doc.setFont("helvetica", "bold");
+  ctx.doc.setFontSize(12);
+  ctx.doc.text(title, ctx.margin, ctx.cursorY);
+  ctx.cursorY += 16;
 
-  doc.setFontSize(10);
-  doc.text(
-    "Below sections are generated from the DPP JSON structure (as available) and mapped to Annex I groups in your constants.",
-    14,
-    24,
-    { maxWidth: 182 }
-  );
+  ctx.doc.setFont("helvetica", "normal");
+  ctx.doc.setFontSize(ctx.fontSize);
+}
 
-  // Each section expected format (suggested):
-  // DPP_ANNEX_I_SECTIONS: Array<{ key: string; title: string; fields: Array<{ path: string; label: string }> }>
-  // If your constant shape differs, chỉnh đoạn mapping bên dưới cho đúng.
-  const startAnnexY = 32;
+function addParagraph(ctx: PdfCtx, text: string) {
+  const maxWidth = ctx.pageWidth - ctx.margin * 2;
+  const lines = ctx.doc.splitTextToSize(text, maxWidth);
+  ensureSpace(ctx, lines.length * ctx.lineHeight + 8);
 
-  for (let i = 0; i < (DPP_ANNEX_I_SECTIONS || []).length; i++) {
-    const sec = (DPP_ANNEX_I_SECTIONS as any)[i];
-    const title = sec?.title || sec?.label || sec?.name || `Section ${i + 1}`;
-    const fields = sec?.fields || [];
+  ctx.doc.text(lines, ctx.margin, ctx.cursorY);
+  ctx.cursorY += lines.length * ctx.lineHeight + 6;
+}
 
-    const rows: Array<[string, string]> = [];
+function addKeyValues(ctx: PdfCtx, items: Array<{ k: string; v: any }>) {
+  const maxWidth = ctx.pageWidth - ctx.margin * 2;
+  const keyWidth = 140;
+  const valueWidth = maxWidth - keyWidth - 10;
 
-    for (const f of fields) {
-      const label = f?.label || f?.name || f?.key || f?.path || "-";
-      const path = f?.path;
+  items.forEach(({ k, v }) => {
+    const key = safeText(k);
+    const val = safeText(v);
 
-      let value: any = "-";
-      if (path && typeof path === "string") {
-        // resolve "a.b.c" from dppRoot
-        const parts = path.split(".");
-        let cur: any = dppRoot;
-        for (const p of parts) {
-          if (!cur) break;
-          cur = cur[p];
-        }
-        if (Array.isArray(cur)) value = cur.length ? cur.join(", ") : "-";
-        else if (cur && typeof cur === "object") value = JSON.stringify(cur);
-        else value = safe(cur);
-      } else if (f?.getValue && typeof f.getValue === "function") {
-        value = safe(f.getValue(dppRoot));
-      }
+    const valLines = ctx.doc.splitTextToSize(val, valueWidth);
+    const rowHeight = Math.max(ctx.lineHeight, valLines.length * ctx.lineHeight);
 
-      // keep table small
-      rows.push([label, typeof value === "string" ? value : safe(value)]);
-    }
+    ensureSpace(ctx, rowHeight + 4);
 
-    // New page if needed
-    const y = nextY(doc);
-    if (y > 250) doc.addPage();
+    ctx.doc.setFont("helvetica", "bold");
+    ctx.doc.text(`${key}:`, ctx.margin, ctx.cursorY);
 
-    addTitle(doc, title, nextY(doc));
+    ctx.doc.setFont("helvetica", "normal");
+    ctx.doc.text(valLines, ctx.margin + keyWidth, ctx.cursorY);
 
-    autoTable(doc, {
-      startY: nextY(doc),
-      head: [["Field", "Value"]],
-      body: rows.length ? rows : [["-", "-"]],
-      styles: { fontSize: 9, cellPadding: 2, overflow: "linebreak" },
-      headStyles: { fillColor: [245, 245, 245] },
-      columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 120 },
-      },
-      margin: { left: 14, right: 14 },
-    });
-  }
-
-  doc.addPage();
-
-  // =========================
-  // SUPPLY CHAIN EVENTS (per tier) + event-level DPP snippet
-  // =========================
-  addTitle(doc, "Supply chain events (EPCIS) by tier", 16);
-
-  const tierGroups = groupByTier(allEvents);
-
-  if (!tierGroups.length) {
-    doc.setFontSize(10);
-    doc.text("No EPCIS events found for this batch.", 14, 26);
-  } else {
-    for (const g of tierGroups) {
-      const y0 = nextY(doc);
-      if (y0 > 250) doc.addPage();
-
-      addTitle(doc, `${tierLabel(g.tier)} — ${g.events.length} events`, nextY(doc));
-
-      const body = g.events.map((ev) => {
-        const dpp = getEventDpp(ev);
-
-        // build a compact dpp summary (same spirit as your old table cell)
-        const dppSummaryParts: string[] = [];
-        if (dpp?.product_description?.name) dppSummaryParts.push(`Product: ${dpp.product_description.name}`);
-        if (dpp?.composition?.materials?.length) dppSummaryParts.push(`Materials: ${dpp.composition.materials.join(", ")}`);
-        if (dpp?.brand_info?.brand) dppSummaryParts.push(`Brand: ${dpp.brand_info.brand}`);
-        if (dpp?.digital_identity?.did) dppSummaryParts.push(`DID: ${dpp.digital_identity.did}`);
-        const dppSummary = dppSummaryParts.length ? dppSummaryParts.join(" | ") : "-";
-
-        return [
-          safeDate((ev as any).event_time),
-          safe((ev as any).event_type),
-          safe((ev as any).biz_step),
-          safe((ev as any).read_point),
-          safe((ev as any).biz_location),
-          dppSummary,
-        ];
-      });
-
-      autoTable(doc, {
-        startY: nextY(doc),
-        head: [["Time", "Type", "Biz step", "Read point", "Biz location", "Event DPP"]],
-        body,
-        styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
-        headStyles: { fillColor: [245, 245, 245] },
-        margin: { left: 14, right: 14 },
-        columnStyles: {
-          0: { cellWidth: 22 },
-          1: { cellWidth: 20 },
-          2: { cellWidth: 26 },
-          3: { cellWidth: 28 },
-          4: { cellWidth: 28 },
-          5: { cellWidth: 48 },
-        },
-      });
-    }
-  }
-
-  doc.addPage();
-
-  // =========================
-  // DOCUMENTS
-  // =========================
-  addTitle(doc, "Certificates & documents", 16);
-
-  const docs: DocumentItem[] = (data.documents || []) as any;
-
-  autoTable(doc, {
-    startY: 24,
-    head: [["File", "Hash", "Bundle", "VC status"]],
-    body: (docs || []).map((d: any) => [
-      safe(d.file_name),
-      shortHash(d.file_hash),
-      safe(d.doc_bundle_id),
-      safe(d.vc_status),
-    ]),
-    styles: { fontSize: 9, cellPadding: 2, overflow: "linebreak" },
-    headStyles: { fillColor: [245, 245, 245] },
-    margin: { left: 14, right: 14 },
+    ctx.cursorY += rowHeight + 4;
   });
 
-  // =========================
-  // FINALIZE: compute hash of produced PDF
-  // =========================
-  const pdfBlob = doc.output("blob") as Blob;
-  const hash = await hashPdfBlob(pdfBlob);
-
-  // Append hash page (so auditor can verify)
-  const doc2 = new jsPDF({ unit: "mm", format: "a4" });
-  // Instead of rebuilding, easiest: add last page into same doc BEFORE output.
-  // We already output -> so we do a second pass by regenerating output is heavy.
-  // Alternative: create hash page BEFORE output:
-  // (But we already did output above)
-  // => We'll do it correctly: regenerate output with hash page.
-
-  // REBUILD with hash page properly (simple approach):
-  // NOTE: If you want no rebuild, move hashing to after doc.addPage() and before output.
-  // We'll do: create hash page in original doc then output again.
-
-  // Add hash page to original doc
-  // (jsPDF still in memory)
-  doc.addPage();
-  addTitle(doc, "File integrity", 16);
-  doc.setFontSize(10);
-  doc.text("SHA-256 hash of this PDF file:", 14, 26);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text(hash, 14, 34, { maxWidth: 182 });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text(
-    "You can verify by computing SHA-256 over the downloaded PDF file and comparing the value above.",
-    14,
-    48,
-    { maxWidth: 182 }
-  );
-  doc.setTextColor(0);
-
-  const finalBlob = doc.output("blob") as Blob;
-
-  return { blob: finalBlob, hash, fileName };
+  ctx.cursorY += 4;
 }
 
 /**
- * Convenience: export & trigger download in browser
+ * Extract the 16 groups you already use in UI (Annex I-like structure)
+ */
+function buildDppSectionsFromData(data: DppResponse) {
+  // You might store DPP in various places; we try a few
+  const rootAny: any = data as any;
+  const dpp =
+    rootAny?.dpp_json?.dpp ||
+    rootAny?.dpp_json ||
+    rootAny?.dpp ||
+    rootAny?.batch?.dpp ||
+    null;
+
+  // If your backend doesn’t provide a single DPP root, we still export from batch/events.
+  return {
+    dppRoot: dpp,
+  };
+}
+
+function writeBlockchain(ctx: PdfCtx, data: DppResponse) {
+  addSectionTitle(ctx, "Blockchain proof");
+  addKeyValues(ctx, [
+    { k: "Status", v: data.blockchain?.status || "-" },
+    { k: "Network", v: data.blockchain?.network || "-" },
+    { k: "Tx hash", v: data.blockchain?.tx_hash || "-" },
+    { k: "Block number", v: data.blockchain?.block_number ?? "-" },
+    { k: "Anchored at", v: safeDate(data.blockchain?.created_at) },
+    { k: "Root hash", v: data.blockchain?.root_hash || "-" },
+    { k: "IPFS CID", v: data.blockchain?.ipfs_cid || "-" },
+    { k: "IPFS gateway", v: data.blockchain?.ipfs_gateway || "-" },
+  ]);
+}
+
+function writeIdentification(ctx: PdfCtx, data: DppResponse) {
+  addSectionTitle(ctx, "Product identification & batch");
+  addKeyValues(ctx, [
+    { k: "Product name", v: data.batch?.product?.name || "-" },
+    { k: "Brand", v: data.batch?.product?.brand || "-" },
+    { k: "GTIN", v: data.batch?.product?.gtin || "-" },
+    { k: "Product code", v: data.batch?.product_code || "-" },
+    { k: "Batch code", v: data.batch?.batch_code || "-" },
+    { k: "Manufacturing date", v: safeDate(data.batch?.mfg_date) },
+    { k: "Country", v: data.batch?.country || "-" },
+    {
+      k: "Quantity",
+      v:
+        data.batch?.quantity != null
+          ? `${data.batch.quantity} ${data.batch.unit || ""}`.trim()
+          : "-",
+    },
+  ]);
+}
+
+/**
+ * Build “EU Annex I-like” DPP content based on your known DPP fields
+ * (same list you rendered inside table cell previously).
+ */
+function writeDppAnnexLike(ctx: PdfCtx, dpp: any) {
+  addSectionTitle(ctx, "DPP information (Annex I-like structure)");
+
+  if (!dpp) {
+    addParagraph(ctx, "No consolidated DPP object found on this response. Export continues using batch/events data.");
+    return;
+  }
+
+  // 1. Product description
+  if (dpp.product_description) {
+    addSectionTitle(ctx, "1) Product description");
+    addKeyValues(ctx, [
+      { k: "Name", v: dpp.product_description.name },
+      { k: "Model", v: dpp.product_description.model },
+      { k: "GTIN", v: dpp.product_description.gtin },
+      { k: "Category", v: dpp.product_description.category },
+      { k: "Description", v: dpp.product_description.description },
+    ]);
+  }
+
+  // 2. Composition
+  if (dpp.composition) {
+    addSectionTitle(ctx, "2) Composition");
+    const mats =
+      dpp.composition.materials?.join(", ") ||
+      dpp.composition.materials_block
+        ?.map((m: any) => `${safeText(m.name)} ${m.percentage != null ? `${m.percentage}%` : ""}`.trim())
+        .filter(Boolean)
+        .join(", ");
+
+    addKeyValues(ctx, [
+      { k: "Materials", v: mats || "-" },
+      { k: "Notes", v: dpp.composition.notes },
+    ]);
+  }
+
+  // 3. Use phase
+  if (dpp.use_phase) {
+    addSectionTitle(ctx, "3) Use phase");
+    addKeyValues(ctx, [
+      { k: "Instructions", v: dpp.use_phase.instructions },
+      { k: "Care", v: dpp.use_phase.care },
+      { k: "Warranty", v: dpp.use_phase.warranty },
+    ]);
+  }
+
+  // 4. Brand
+  if (dpp.brand_info) {
+    addSectionTitle(ctx, "4) Brand information");
+    addKeyValues(ctx, [
+      { k: "Brand", v: dpp.brand_info.brand },
+      { k: "Contact", v: dpp.brand_info.contact },
+      { k: "Address", v: dpp.brand_info.address },
+      { k: "Website", v: dpp.brand_info.website },
+    ]);
+  }
+
+  // 5. Social impact
+  if (dpp.social_impact) {
+    addSectionTitle(ctx, "5) Social impact");
+    const certText = Array.isArray(dpp.social_impact.certifications)
+      ? dpp.social_impact.certifications
+          .map((c: any) => `${safeText(c.name)}${c.number ? ` (${c.number})` : ""}`.trim())
+          .filter(Boolean)
+          .join(", ")
+      : "-";
+    addKeyValues(ctx, [
+      { k: "Factory", v: dpp.social_impact.factory },
+      { k: "Certifications", v: certText },
+      { k: "Notes", v: dpp.social_impact.notes },
+    ]);
+  }
+
+  // 6. Animal welfare
+  if (dpp.animal_welfare) {
+    addSectionTitle(ctx, "6) Animal welfare");
+    addKeyValues(ctx, [
+      { k: "Standard", v: dpp.animal_welfare.standard },
+      { k: "Notes", v: dpp.animal_welfare.notes },
+    ]);
+  }
+
+  // 7. End of life
+  if (dpp.end_of_life) {
+    addSectionTitle(ctx, "7) End-of-life");
+    addKeyValues(ctx, [
+      { k: "Recycle guideline", v: dpp.end_of_life.recycle_guideline },
+      { k: "Take-back", v: dpp.end_of_life.take_back },
+      { k: "Notes", v: dpp.end_of_life.notes },
+    ]);
+  }
+
+  // 8. Health & safety
+  if (dpp.health_safety) {
+    addSectionTitle(ctx, "8) Health & safety");
+    addKeyValues(ctx, [
+      { k: "Policy", v: dpp.health_safety.policy },
+      { k: "Certified by", v: dpp.health_safety.certified_by },
+      { k: "Notes", v: dpp.health_safety.notes },
+    ]);
+  }
+
+  // 9. Digital identity
+  if (dpp.digital_identity) {
+    addSectionTitle(ctx, "9) Digital identity");
+    addKeyValues(ctx, [
+      { k: "DID", v: dpp.digital_identity.did },
+      { k: "IPFS CID", v: dpp.digital_identity.ipfs_cid },
+      { k: "Notes", v: dpp.digital_identity.notes },
+    ]);
+  }
+
+  // 10. Environmental impact
+  if (dpp.environmental_impact) {
+    addSectionTitle(ctx, "10) Environmental impact");
+    addKeyValues(ctx, [
+      { k: "CO2", v: dpp.environmental_impact.co2 },
+      { k: "Water", v: dpp.environmental_impact.water },
+      { k: "Energy", v: dpp.environmental_impact.energy },
+      { k: "Notes", v: dpp.environmental_impact.notes },
+    ]);
+  }
+
+  // 11. Circularity
+  if (dpp.circularity) {
+    addSectionTitle(ctx, "11) Circularity");
+    addKeyValues(ctx, [
+      { k: "Recycled content", v: dpp.circularity.recycled_content },
+      { k: "Reusability", v: dpp.circularity.reusability },
+      { k: "Waste reduction", v: dpp.circularity.waste_reduction },
+      { k: "Notes", v: dpp.circularity.notes },
+    ]);
+  }
+
+  // 12. Quantity info
+  if (dpp.quantity_info) {
+    addSectionTitle(ctx, "12) Quantity information");
+    addKeyValues(ctx, [
+      { k: "Batch", v: dpp.quantity_info.batch },
+      { k: "Weight", v: dpp.quantity_info.weight },
+      { k: "Unit", v: dpp.quantity_info.unit },
+    ]);
+  }
+
+  // 13. Cost info
+  if (dpp.cost_info) {
+    addSectionTitle(ctx, "13) Cost information");
+    addKeyValues(ctx, [
+      { k: "Labor cost", v: dpp.cost_info.labor_cost },
+      { k: "Transport cost", v: dpp.cost_info.transport_cost },
+      { k: "Currency", v: dpp.cost_info.currency },
+    ]);
+  }
+
+  // 14. Transport
+  if (dpp.transport) {
+    addSectionTitle(ctx, "14) Transport");
+    addKeyValues(ctx, [
+      { k: "Distance", v: dpp.transport.distance },
+      { k: "CO2 per km", v: dpp.transport.co2_per_km },
+      { k: "Mode", v: dpp.transport.mode },
+      { k: "Notes", v: dpp.transport.notes },
+    ]);
+  }
+
+  // 15. Documentation
+  if (dpp.documentation) {
+    addSectionTitle(ctx, "15) Documentation");
+    addKeyValues(ctx, [
+      { k: "File", v: dpp.documentation.file },
+      { k: "Issued by", v: dpp.documentation.issued_by },
+      { k: "Issued at", v: safeDate(dpp.documentation.issued_at) },
+      { k: "Notes", v: dpp.documentation.notes },
+    ]);
+  }
+
+  // 16. Supply chain
+  if (dpp.supply_chain) {
+    addSectionTitle(ctx, "16) Supply chain");
+    addKeyValues(ctx, [
+      { k: "Tier", v: dpp.supply_chain.tier },
+      { k: "Supplier", v: dpp.supply_chain.supplier },
+      { k: "Updated at", v: safeDate(dpp.supply_chain.updated_at) },
+      { k: "Notes", v: dpp.supply_chain.notes },
+    ]);
+  }
+}
+
+function writeDocuments(ctx: PdfCtx, docs: DocumentItem[] | undefined) {
+  addSectionTitle(ctx, "Documents & credentials");
+  if (!docs || docs.length === 0) {
+    addParagraph(ctx, "No documents available.");
+    return;
+  }
+
+  docs.forEach((d, idx) => {
+    ensureSpace(ctx, 44);
+    ctx.doc.setFont("helvetica", "bold");
+    ctx.doc.text(`${idx + 1}. ${safeText((d as any).file_name)}`, ctx.margin, ctx.cursorY);
+    ctx.cursorY += 14;
+
+    ctx.doc.setFont("helvetica", "normal");
+    addKeyValues(ctx, [
+      { k: "VC status", v: (d as any).vc_status || "-" },
+      { k: "Bundle", v: (d as any).doc_bundle_id || "-" },
+      { k: "File hash", v: shortHash((d as any).file_hash || "-", 10, 10) },
+    ]);
+  });
+}
+
+function writeEventsTimeline(ctx: PdfCtx, events: EventItem[]) {
+  addSectionTitle(ctx, "Traceability events (EPCIS timeline)");
+
+  if (!events || events.length === 0) {
+    addParagraph(ctx, "No EPCIS events found.");
+    return;
+  }
+
+  // Sort by event_time ascending
+  const sorted = [...events].sort((a: any, b: any) => {
+    const ta = new Date((a as any).event_time || (a as any).eventTime || 0).getTime();
+    const tb = new Date((b as any).event_time || (b as any).eventTime || 0).getTime();
+    return ta - tb;
+  });
+
+  const tiers = groupEventsByTier(sorted);
+
+  tiers.forEach((tier) => {
+    addSectionTitle(ctx, `Tier: ${tier.key} (${tier.events.length} events)`);
+
+    tier.events.forEach((ev: any, idx) => {
+      const time = safeDate(ev.event_time || ev.eventTime);
+      const id = safeText(ev.event_id || ev.id);
+      const type = safeText(ev.event_type || ev.type);
+      const biz = safeText(ev.biz_step || ev.bizStep);
+      const action = safeText(ev.action);
+      const rp = safeText(ev.read_point || ev.readPoint);
+      const bl = safeText(ev.biz_location || ev.bizLocation);
+
+      ensureSpace(ctx, 86);
+
+      ctx.doc.setFont("helvetica", "bold");
+      ctx.doc.text(`${idx + 1}) ${time}`, ctx.margin, ctx.cursorY);
+      ctx.cursorY += 14;
+
+      ctx.doc.setFont("helvetica", "normal");
+      addKeyValues(ctx, [
+        { k: "Event ID", v: id },
+        { k: "Type", v: type },
+        { k: "Action", v: action },
+        { k: "Biz step", v: biz },
+        { k: "Read point", v: rp },
+        { k: "Biz location", v: bl },
+      ]);
+
+      // DPP attached to event (important!)
+      const dpp = getEventDpp(ev);
+      if (dpp) {
+        addParagraph(ctx, "Event DPP snapshot:");
+        // Keep it compact: same “summary lines” as UI cell
+        const lines: string[] = [];
+
+        if (dpp.product_description) {
+          lines.push(
+            `Product: ${[dpp.product_description.name, dpp.product_description.model, dpp.product_description.gtin]
+              .filter(Boolean)
+              .join(" — ")}`
+          );
+        }
+        if (dpp.composition) {
+          const mats =
+            dpp.composition.materials?.join(", ") ||
+            dpp.composition.materials_block
+              ?.map((m: any) => `${safeText(m.name)} ${m.percentage != null ? `${m.percentage}%` : ""}`.trim())
+              .filter(Boolean)
+              .join(", ");
+          if (mats) lines.push(`Composition: ${mats}`);
+        }
+        if (dpp.use_phase?.instructions) lines.push(`Use: ${dpp.use_phase.instructions}`);
+        if (dpp.brand_info?.brand) lines.push(`Brand: ${dpp.brand_info.brand}`);
+        if (dpp.social_impact?.factory) lines.push(`Social: ${dpp.social_impact.factory}`);
+        if (dpp.end_of_life?.recycle_guideline) lines.push(`End-of-life: ${dpp.end_of_life.recycle_guideline}`);
+        if (dpp.digital_identity?.did) lines.push(`DID: ${dpp.digital_identity.did}`);
+        if (dpp.environmental_impact) {
+          const e = dpp.environmental_impact;
+          const envLine = ["co2", "water", "energy"]
+            .map((k) => (e[k] != null ? `${k.toUpperCase()}: ${e[k]}` : ""))
+            .filter(Boolean)
+            .join(" | ");
+          if (envLine) lines.push(`Environment: ${envLine}`);
+        }
+
+        addParagraph(ctx, lines.length ? lines.join("\n") : "(No structured DPP fields found on event)");
+      }
+
+      ctx.cursorY += 6;
+      ctx.doc.setDrawColor(235);
+      ctx.doc.line(ctx.margin, ctx.cursorY, ctx.pageWidth - ctx.margin, ctx.cursorY);
+      ctx.cursorY += 12;
+    });
+  });
+}
+
+/**
+ * MAIN EXPORT FUNCTION
  */
 export async function exportAndDownloadDppPdf(
   data: DppResponse,
   allEvents: EventItem[],
-  options: ExportOptions = {}
+  opts: ExportPdfOptions = {}
 ) {
-  const { blob, fileName } = await exportDppPdf(data, allEvents, options);
+  const title = opts.title || "EU Digital Product Passport (DPP)";
+  const fileName =
+    opts.fileName || `DPP_${(data as any)?.batch?.batch_code || "export"}.pdf`;
 
-  // Trigger download
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const ctx = initPdf(title);
+
+  // --- Identification
+  writeIdentification(ctx, data);
+
+  // --- Blockchain proof
+  writeBlockchain(ctx, data);
+
+  // --- Annex I-like DPP sections (from consolidated DPP root if available)
+  const { dppRoot } = buildDppSectionsFromData(data);
+  writeDppAnnexLike(ctx, dppRoot);
+
+  // --- Documents
+  writeDocuments(ctx, (data as any).documents as DocumentItem[] | undefined);
+
+  // --- Events timeline (incl. event-level DPP snapshots)
+  writeEventsTimeline(ctx, allEvents || []);
+
+  // footer page numbers
+  const pageCount = ctx.doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    ctx.doc.setPage(i);
+    ctx.doc.setFontSize(9);
+    ctx.doc.setTextColor(120);
+    ctx.doc.text(
+      `Page ${i} / ${pageCount}`,
+      ctx.pageWidth - ctx.margin,
+      ctx.pageHeight - 18,
+      { align: "right" }
+    );
+  }
+
+  ctx.doc.save(fileName);
 }
