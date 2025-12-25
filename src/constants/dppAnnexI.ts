@@ -16,3 +16,47 @@ export const DPP_ANNEX_I = [
   { key: "supply_chain", label: "Supply Chain Transparency" },
   { key: "end_of_life", label: "End-of-life Instructions" },
 ];
+
+// src/constants/dppAnnexI.ts
+export const DPP_ANNEX_I_SECTIONS = [
+  {
+    key: "product",
+    title: "1. Product Identification",
+  },
+  {
+    key: "composition",
+    title: "2. Composition & Materials",
+  },
+  {
+    key: "manufacturing",
+    title: "3. Manufacturing Information",
+  },
+  {
+    key: "traceability",
+    title: "4. Supply Chain Traceability",
+  },
+  {
+    key: "environment",
+    title: "5. Environmental Impact",
+  },
+  {
+    key: "social",
+    title: "6. Social & Ethical Compliance",
+  },
+  {
+    key: "health",
+    title: "7. Health & Safety",
+  },
+  {
+    key: "circularity",
+    title: "8. Circularity & End-of-Life",
+  },
+  {
+    key: "documentation",
+    title: "9. Documentation & Certificates",
+  },
+  {
+    key: "blockchain",
+    title: "10. Digital Integrity & Blockchain Proof",
+  },
+];
