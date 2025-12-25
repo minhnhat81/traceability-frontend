@@ -40,7 +40,11 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   "sup-systemconfigs": <SettingOutlined className="menu-icon" />,
 };
 
-const Sidebar = () => {
+type SidebarProps = {
+  onNavigate?: () => void;
+};
+
+const Sidebar = ({ onNavigate }: SidebarProps) => {
   const user = useAuth().user;
 
   // Role lấy từ user.role
@@ -55,14 +59,14 @@ const Sidebar = () => {
   const renderMenu = (nodes: MenuNode[]) => (
     <ul className="space-y-1">
       {nodes.map((node) => {
-        const iconNode = ICON_MAP[node.key]; // icon theo key
+        const iconNode = ICON_MAP[node.key];
 
         return (
           <li key={node.key}>
-            {/* ITEM CÓ PATH → LINK */}
             {node.path ? (
               <NavLink
                 to={node.path}
+                onClick={onNavigate} // ⭐ QUAN TRỌNG: đóng sidebar mobile
                 className={({ isActive }) =>
                   `
                   sidebar-item flex items-center gap-3 px-3 py-2 rounded-md 
@@ -71,24 +75,18 @@ const Sidebar = () => {
                 `
                 }
               >
-                {/* ICON */}
                 {iconNode && (
                   <span className="text-lg flex items-center justify-center">
                     {iconNode}
                   </span>
                 )}
-
-                {/* LABEL */}
                 <span className="text-sm font-medium">{node.label}</span>
               </NavLink>
             ) : (
               <>
-                {/* GROUP LABEL */}
                 <p className="mt-4 mb-2 text-xs font-semibold uppercase text-gray-500 px-1">
                   {node.label}
                 </p>
-
-                {/* CHILDREN */}
                 {node.children && renderMenu(node.children)}
               </>
             )}
@@ -101,16 +99,14 @@ const Sidebar = () => {
   return (
     <aside
       className="
-        hidden md:block w-64 border-r bg-white px-4 pt-6 pb-4 
+        w-64 border-r bg-white px-4 pt-6 pb-4
         sidebar-scroll select-none
       "
     >
-      {/* HEADER SMALL */}
       <h2 className="text-xs font-semibold text-gray-400 uppercase px-2 mb-3">
         {dynamicMenu.label}
       </h2>
 
-      {/* RENDER MENU */}
       {renderMenu(dynamicMenu.children ?? [])}
     </aside>
   );

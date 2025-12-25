@@ -17,10 +17,12 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   return (
     <header className="bg-white shadow px-6 py-3 flex justify-between items-center">
       <div className="flex items-center gap-3">
+        {/* ☰ MOBILE MENU */}
         <button
           type="button"
           className="md:hidden p-2 rounded hover:bg-gray-100"
-          onClick={() => onMenuClick?.()}
+          onClick={onMenuClick}
+          aria-label="Open menu"
         >
           <MenuOutlined style={{ fontSize: 20 }} />
         </button>
@@ -40,7 +42,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
           icon={<LogoutOutlined />}
           onClick={() => {
             clearAuth();
-            window.location.href = "/#/login"; // ⭐ QUAN TRỌNG
+            window.location.href = "/#/login"; // HashRouter
           }}
         >
           Logout
