@@ -41,10 +41,13 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 type SidebarProps = {
+  /** className để AppLayout quyết định show/hide theo desktop/mobile */
+  className?: string;
+  /** đóng drawer khi click menu (mobile) */
   onNavigate?: () => void;
 };
 
-const Sidebar = ({ onNavigate }: SidebarProps) => {
+const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
   const user = useAuth().user;
 
   // Role lấy từ user.role
@@ -59,14 +62,14 @@ const Sidebar = ({ onNavigate }: SidebarProps) => {
   const renderMenu = (nodes: MenuNode[]) => (
     <ul className="space-y-1">
       {nodes.map((node) => {
-        const iconNode = ICON_MAP[node.key];
+        const iconNode = ICON_MAP[node.key]; // icon theo key
 
         return (
           <li key={node.key}>
             {node.path ? (
               <NavLink
                 to={node.path}
-                onClick={onNavigate} // ⭐ QUAN TRỌNG: đóng sidebar mobile
+                onClick={() => onNavigate?.()}
                 className={({ isActive }) =>
                   `
                   sidebar-item flex items-center gap-3 px-3 py-2 rounded-md 
@@ -98,10 +101,11 @@ const Sidebar = ({ onNavigate }: SidebarProps) => {
 
   return (
     <aside
-      className="
-        w-64 border-r bg-white px-4 pt-6 pb-4
+      className={`
+        w-64 border-r bg-white px-4 pt-6 pb-4 
         sidebar-scroll select-none
-      "
+        ${className}
+      `}
     >
       <h2 className="text-xs font-semibold text-gray-400 uppercase px-2 mb-3">
         {dynamicMenu.label}
