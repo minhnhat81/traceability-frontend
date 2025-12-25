@@ -20,10 +20,15 @@ import MerkleViewer from "../components/MerkleViewer";
 import DIDViewer from "../components/DIDViewer";
 import DppSection from "../components/dpp/DppSection";
 import ConsumerEventTimeline from "../components/dpp/ConsumerEventTimeline";
+import { Button, message } from "antd";
+import { exportAndDownloadDppPdf } from "../i18n/exportDppPdf";
 
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
+
+
+
 
 /* ======================
    Helpers
@@ -36,6 +41,7 @@ function shortHash(v?: string | null) {
   const s = String(v);
   return s.length > 18 ? `${s.slice(0, 10)}…${s.slice(-8)}` : s;
 }
+
 
 /* ======================
    Supply chain summary
@@ -77,6 +83,24 @@ export default function DppLandingPage({
   data: DppResponse;
   allEvents: EventItem[];
 }) {
+
+  const [msgApi, contextHolder] = message.useMessage();
+
+  async function onExportPdf() {
+    try {
+      msgApi.loading({ content: "Generating EU DPP PDF…", key: "pdf" });
+
+      await exportAndDownloadDppPdf(data, allEvents, {
+        fileName: `DPP_${data.batch.batch_code}.pdf`,
+      });
+
+      msgApi.success({ content: "PDF exported!", key: "pdf" });
+    } catch (e) {
+      console.error(e);
+      msgApi.error({ content: "Export failed", key: "pdf" });
+    }
+ }
+
   const isMobile =
     typeof window !== "undefined" &&
     window.innerWidth < 768;
