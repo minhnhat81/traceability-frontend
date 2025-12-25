@@ -3,21 +3,27 @@ import { Outlet } from "react-router-dom";
 import Topbar from "../../components/Topbar";
 import Sidebar from "../../components/Sidebar";
 
-export default function AppLayout({ children }: { children?: React.ReactNode }) {
+export default function AppLayout({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
   const [openSidebar, setOpenSidebar] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* TOP BAR */}
-      <Topbar />
+      <Topbar
+        onToggleSidebar={() => setOpenSidebar((prev) => !prev)}
+      />
 
       <div className="flex flex-1 relative">
-        {/* ===== SIDEBAR DESKTOP (Sidebar.tsx đã có phân quyền + icon) ===== */}
+        {/* ===== SIDEBAR DESKTOP ===== */}
         <div className="hidden md:block">
           <Sidebar />
         </div>
 
-        {/* ===== (OPTIONAL) SIDEBAR MOBILE ===== */}
+        {/* ===== SIDEBAR MOBILE (DRAWER STYLE) ===== */}
         {openSidebar && (
           <div className="fixed inset-0 z-40 flex md:hidden">
             {/* backdrop */}
@@ -25,9 +31,12 @@ export default function AppLayout({ children }: { children?: React.ReactNode }) 
               className="flex-1 bg-black bg-opacity-30"
               onClick={() => setOpenSidebar(false)}
             />
+
             {/* sidebar */}
             <div className="w-64 bg-white border-r p-4 sidebar-scroll">
-              <Sidebar />
+              <Sidebar
+                onNavigate={() => setOpenSidebar(false)}
+              />
             </div>
           </div>
         )}
