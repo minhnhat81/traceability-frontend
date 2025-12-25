@@ -9,26 +9,18 @@ import {
   Divider,
   Collapse,
   Table,
+  Button,
+  message,
 } from "antd";
-import {
-  DppResponse,
-  EventItem,
-  DocumentItem,
-} from "../types/dpp";
+import { DppResponse, EventItem, DocumentItem } from "../types/dpp";
 import EPCISGraph from "../components/EPCISGraph";
 import MerkleViewer from "../components/MerkleViewer";
 import DIDViewer from "../components/DIDViewer";
-import DppSection from "../components/dpp/DppSection";
 import ConsumerEventTimeline from "../components/dpp/ConsumerEventTimeline";
-import { Button, message } from "antd";
 import { exportAndDownloadDppPdf } from "../i18n/exportDppPdf";
-
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
-
-
-
 
 /* ======================
    Helpers
@@ -41,7 +33,6 @@ function shortHash(v?: string | null) {
   const s = String(v);
   return s.length > 18 ? `${s.slice(0, 10)}…${s.slice(-8)}` : s;
 }
-
 
 /* ======================
    Supply chain summary
@@ -57,10 +48,7 @@ function summarizeEvents(events: EventItem[]) {
 
   events.forEach((e: any) => {
     const role = String(
-      e.owner_role ||
-        e.event_owner_role ||
-        e.batch_owner_role ||
-        ""
+      e.owner_role || e.event_owner_role || e.batch_owner_role || ""
     ).toUpperCase();
 
     if (role.includes("FARM")) tiers.FARM++;
@@ -83,7 +71,7 @@ export default function DppLandingPage({
   data: DppResponse;
   allEvents: EventItem[];
 }) {
-
+  // ✅ MUST be inside component
   const [msgApi, contextHolder] = message.useMessage();
 
   async function onExportPdf() {
@@ -99,30 +87,23 @@ export default function DppLandingPage({
       console.error(e);
       msgApi.error({ content: "Export failed", key: "pdf" });
     }
- }
+  }
 
-  const isMobile =
-    typeof window !== "undefined" &&
-    window.innerWidth < 768;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
-  const productName =
-    data.batch.product?.name || "Product";
-  const brand =
-    data.batch.product?.brand || "-";
-  const gtin =
-    data.batch.product?.gtin || "-";
-  const country =
-    data.batch.country || "-";
+  const productName = data.batch.product?.name || "Product";
+  const brand = data.batch.product?.brand || "-";
+  const gtin = data.batch.product?.gtin || "-";
+  const country = data.batch.country || "-";
   const mfgDate = safeDate(data.batch.mfg_date);
   const quantity =
     data.batch.quantity != null
       ? `${data.batch.quantity} ${data.batch.unit || ""}`
       : "-";
+
   console.log("🔥🔥🔥 DppLandingPage RENDERED 🔥🔥🔥");
-  const tiers = useMemo(
-    () => summarizeEvents(allEvents),
-    [allEvents]
-  );
+
+  const tiers = useMemo(() => summarizeEvents(allEvents), [allEvents]);
 
   /* ======================
      Documents columns
@@ -152,9 +133,7 @@ export default function DppLandingPage({
       key: "vc_status",
       render: (v: string) =>
         v ? (
-          <Tag color={v === "verified" ? "green" : "orange"}>
-            {v}
-          </Tag>
+          <Tag color={v === "verified" ? "green" : "orange"}>{v}</Tag>
         ) : (
           "-"
         ),
@@ -165,287 +144,221 @@ export default function DppLandingPage({
      Render
   ========================= */
   return (
-    <div
-      style={{
-        maxWidth: 980,
-        margin: "0 auto",
-        padding: isMobile ? 12 : 24,
-        border: "5px solid red",   // 👈 thêm
-        background: "#fffbe6",     // 👈 thêm
-      }}
-    >
-      {/* ================= HERO ================= */}
-      <Card style={{ borderRadius: 14 }}>
-        <Space
-          direction="vertical"
-          size={8}
-          style={{ width: "100%" }}
-        >
-          <Title
-            level={3}
-            style={{ margin: 0, lineHeight: 1.2 }}
-          >
-            {productName}
-          </Title>
+    <>
+      {/* ✅ MUST render this or message() won’t show */}
+      {contextHolder}
 
-          <Text type="secondary">
-            Brand: {brand}
-          </Text>
-
-          <Space wrap>
-            <Tag
-              color={
-                data.blockchain.status === "CONFIRMED"
-                  ? "green"
-                  : "orange"
-              }
-            >
-              {data.blockchain.status === "CONFIRMED"
-                ? "Verified on blockchain"
-                : "Not verified"}
-            </Tag>
-            <Tag>Made in {country}</Tag>
-          </Space>
-
-          <Divider style={{ margin: "12px 0" }} />
-
-          {/* ===== QUICK FACTS ===== */}
-          <Row gutter={[12, 12]}>
-            <Col xs={24} sm={12}>
-              <Text type="secondary">
-                Product code
-              </Text>
-              <div style={{ fontWeight: 600 }}>
-                {data.batch.product_code || "-"}
-              </div>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Text type="secondary">GTIN</Text>
-              <div style={{ fontWeight: 600 }}>
-                {gtin}
-              </div>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Text type="secondary">
-                Manufactured
-              </Text>
-              <div style={{ fontWeight: 600 }}>
-                {mfgDate}
-              </div>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Text type="secondary">
-                Quantity
-              </Text>
-              <div style={{ fontWeight: 600 }}>
-                {quantity}
-              </div>
-            </Col>
-
-            <Col xs={24}>
-              <Text type="secondary">Batch</Text>
-              <div
-                style={{
-                  fontWeight: 600,
-                  wordBreak: "break-word",
-                }}
-              >
-                {data.batch.batch_code}
-              </div>
-            </Col>
-          </Row>
-        </Space>
-      </Card>
-
-      <div style={{ height: 12 }} />
-
-      {/* ================= SUPPLY CHAIN ================= */}
-      <Card
-        title="Supply chain overview"
-        style={{ borderRadius: 14 }}
+      <div
+        style={{
+          maxWidth: 980,
+          margin: "0 auto",
+          padding: isMobile ? 12 : 24,
+          border: "5px solid red", // 👈 giữ nguyên theo code bạn
+          background: "#fffbe6", // 👈 giữ nguyên theo code bạn
+        }}
       >
-        <Row gutter={[10, 10]}>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              🌱 <b>Farm</b>
-              <div>
-                <Text type="secondary">
-                  {tiers.FARM} events
-                </Text>
-              </div>
-            </Card>
-          </Col>
+        {/* ================= HERO ================= */}
+        <Card style={{ borderRadius: 14 }}>
+          <Space direction="vertical" size={8} style={{ width: "100%" }}>
+            <Title level={3} style={{ margin: 0, lineHeight: 1.2 }}>
+              {productName}
+            </Title>
 
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              🚚 <b>Supplier</b>
-              <div>
-                <Text type="secondary">
-                  {tiers.SUPPLIER} events
-                </Text>
-              </div>
-            </Card>
-          </Col>
+            <Text type="secondary">Brand: {brand}</Text>
 
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              🏭 <b>Manufacturer</b>
-              <div>
-                <Text type="secondary">
-                  {tiers.MANUFACTURER} events
-                </Text>
-              </div>
-            </Card>
-          </Col>
-
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              🏷️ <b>Brand</b>
-              <div>
-                <Text type="secondary">
-                  {tiers.BRAND} events
-                </Text>
-              </div>
-            </Card>
-          </Col>
-        </Row>
-      </Card>
-
-      <div style={{ height: 12 }} />
-
-      {/* ================= COLLAPSE SECTIONS ================= */}
-      <Collapse
-        accordion
-        defaultActiveKey={isMobile ? [] : ["blockchain"]}
-      >
-        {/* Blockchain */}
-        <Panel
-          header={
-            <Space>
-              ⛓ Blockchain proof
-              <Tag
-                color={
-                  data.blockchain.status === "CONFIRMED"
-                    ? "green"
-                    : "orange"
-                }
-              >
-                {data.blockchain.status}
+            <Space wrap>
+              <Tag color={data.blockchain.status === "CONFIRMED" ? "green" : "orange"}>
+                {data.blockchain.status === "CONFIRMED"
+                  ? "Verified on blockchain"
+                  : "Not verified"}
               </Tag>
+              <Tag>Made in {country}</Tag>
             </Space>
-          }
-          key="blockchain"
-        >
-          <Space
-            direction="vertical"
-            size={8}
-            style={{ width: "100%" }}
-          >
-            <div>
-              <Text type="secondary">Network</Text>
-              <div style={{ fontWeight: 600 }}>
-                {data.blockchain.network || "-"}
-              </div>
-            </div>
 
-            <div>
-              <Text type="secondary">Tx hash</Text>
-              <div style={{ fontWeight: 600 }}>
-                {shortHash(data.blockchain.tx_hash)}
-              </div>
-            </div>
+            <Divider style={{ margin: "12px 0" }} />
 
+            {/* ✅ EXPORT PDF BUTTON (BẠN THIẾU NÚT NÀY NÊN UI KHÔNG ĐỔI) */}
+            <Space wrap>
+              <Button type="primary" onClick={onExportPdf}>
+                📄 Export EU DPP PDF
+              </Button>
+
+              {/* (tuỳ chọn) nếu bạn muốn 1 nút phụ */}
+              {/* <Button onClick={() => window.print()}>Print</Button> */}
+            </Space>
+
+            {/* ===== QUICK FACTS ===== */}
             <Row gutter={[12, 12]}>
               <Col xs={24} sm={12}>
-                <Text type="secondary">Block</Text>
-                <div style={{ fontWeight: 600 }}>
-                  {data.blockchain.block_number ?? "-"}
-                </div>
+                <Text type="secondary">Product code</Text>
+                <div style={{ fontWeight: 600 }}>{data.batch.product_code || "-"}</div>
               </Col>
+
               <Col xs={24} sm={12}>
-                <Text type="secondary">
-                  Anchored at
-                </Text>
-                <div style={{ fontWeight: 600 }}>
-                  {safeDate(data.blockchain.created_at)}
+                <Text type="secondary">GTIN</Text>
+                <div style={{ fontWeight: 600 }}>{gtin}</div>
+              </Col>
+
+              <Col xs={24} sm={12}>
+                <Text type="secondary">Manufactured</Text>
+                <div style={{ fontWeight: 600 }}>{mfgDate}</div>
+              </Col>
+
+              <Col xs={24} sm={12}>
+                <Text type="secondary">Quantity</Text>
+                <div style={{ fontWeight: 600 }}>{quantity}</div>
+              </Col>
+
+              <Col xs={24}>
+                <Text type="secondary">Batch</Text>
+                <div style={{ fontWeight: 600, wordBreak: "break-word" }}>
+                  {data.batch.batch_code}
                 </div>
               </Col>
             </Row>
-
-            <div>
-              <Text type="secondary">
-                Root hash
-              </Text>
-              <div style={{ fontWeight: 600 }}>
-                {shortHash(data.blockchain.root_hash)}
-              </div>
-            </div>
           </Space>
-        </Panel>
+        </Card>
 
-        {/* EPCIS Summary */}
-        {/* EPCIS Summary */}
-<Panel
-  header={`📦 Product journey (${allEvents.length} events)`}
-  key="journey"
->
-  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-    <ConsumerEventTimeline events={allEvents} />
-  </Space>
-</Panel>
+        <div style={{ height: 12 }} />
 
+        {/* ================= SUPPLY CHAIN ================= */}
+        <Card title="Supply chain overview" style={{ borderRadius: 14 }}>
+          <Row gutter={[10, 10]}>
+            <Col xs={12} sm={6}>
+              <Card size="small">
+                🌱 <b>Farm</b>
+                <div>
+                  <Text type="secondary">{tiers.FARM} events</Text>
+                </div>
+              </Card>
+            </Col>
 
-        {/* EPCIS Graph */}
-        <Panel header="📈 Traceability graph" key="graph">
-          <EPCISGraph
-            events={allEvents.map((e) => ({
-              event_id: e.event_id || "",
-              biz_step: e.biz_step || "",
-              event_time: e.event_time || "",
-            }))}
-          />
-        </Panel>
+            <Col xs={12} sm={6}>
+              <Card size="small">
+                🚚 <b>Supplier</b>
+                <div>
+                  <Text type="secondary">{tiers.SUPPLIER} events</Text>
+                </div>
+              </Card>
+            </Col>
 
-        {/* Merkle */}
-        <Panel
-          header="🌳 Data integrity (Merkle proof)"
-          key="merkle"
-        >
-          <MerkleViewer
-            events={allEvents}
-            documents={data.documents}
-            rootHash={data.blockchain.root_hash}
-          />
-        </Panel>
+            <Col xs={12} sm={6}>
+              <Card size="small">
+                🏭 <b>Manufacturer</b>
+                <div>
+                  <Text type="secondary">{tiers.MANUFACTURER} events</Text>
+                </div>
+              </Card>
+            </Col>
 
-        {/* Documents */}
-        <Panel
-          header={`📄 Certificates & documents (${data.documents.length})`}
-          key="documents"
-        >
-          <Table<DocumentItem>
-            rowKey="id"
-            size="small"
-            columns={docsColumns}
-            dataSource={data.documents}
-            pagination={{ pageSize: 5 }}
-            scroll={isMobile ? { x: 600 } : undefined}
-          />
-        </Panel>
+            <Col xs={12} sm={6}>
+              <Card size="small">
+                🏷️ <b>Brand</b>
+                <div>
+                  <Text type="secondary">{tiers.BRAND} events</Text>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </Card>
 
-        {/* DID */}
-        <Panel header="🆔 Digital Identity" key="did">
-          <DIDViewer
-            initialDid={
-              (data.events?.[0]?.ilmd as any)?.dpp
-                ?.digital_identity?.did || null
+        <div style={{ height: 12 }} />
+
+        {/* ================= COLLAPSE SECTIONS ================= */}
+        <Collapse accordion defaultActiveKey={isMobile ? [] : ["blockchain"]}>
+          {/* Blockchain */}
+          <Panel
+            header={
+              <Space>
+                ⛓ Blockchain proof
+                <Tag color={data.blockchain.status === "CONFIRMED" ? "green" : "orange"}>
+                  {data.blockchain.status}
+                </Tag>
+              </Space>
             }
-          />
-        </Panel>
-      </Collapse>
-    </div>
+            key="blockchain"
+          >
+            <Space direction="vertical" size={8} style={{ width: "100%" }}>
+              <div>
+                <Text type="secondary">Network</Text>
+                <div style={{ fontWeight: 600 }}>{data.blockchain.network || "-"}</div>
+              </div>
+
+              <div>
+                <Text type="secondary">Tx hash</Text>
+                <div style={{ fontWeight: 600 }}>{shortHash(data.blockchain.tx_hash)}</div>
+              </div>
+
+              <Row gutter={[12, 12]}>
+                <Col xs={24} sm={12}>
+                  <Text type="secondary">Block</Text>
+                  <div style={{ fontWeight: 600 }}>{data.blockchain.block_number ?? "-"}</div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Text type="secondary">Anchored at</Text>
+                  <div style={{ fontWeight: 600 }}>{safeDate(data.blockchain.created_at)}</div>
+                </Col>
+              </Row>
+
+              <div>
+                <Text type="secondary">Root hash</Text>
+                <div style={{ fontWeight: 600 }}>{shortHash(data.blockchain.root_hash)}</div>
+              </div>
+            </Space>
+          </Panel>
+
+          {/* EPCIS Summary */}
+          <Panel header={`📦 Product journey (${allEvents.length} events)`} key="journey">
+            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              <ConsumerEventTimeline events={allEvents} />
+            </Space>
+          </Panel>
+
+          {/* EPCIS Graph */}
+          <Panel header="📈 Traceability graph" key="graph">
+            <EPCISGraph
+              events={allEvents.map((e) => ({
+                event_id: e.event_id || "",
+                biz_step: e.biz_step || "",
+                event_time: e.event_time || "",
+              }))}
+            />
+          </Panel>
+
+          {/* Merkle */}
+          <Panel header="🌳 Data integrity (Merkle proof)" key="merkle">
+            <MerkleViewer
+              events={allEvents}
+              documents={data.documents}
+              rootHash={data.blockchain.root_hash}
+            />
+          </Panel>
+
+          {/* Documents */}
+          <Panel
+            header={`📄 Certificates & documents (${data.documents.length})`}
+            key="documents"
+          >
+            <Table<DocumentItem>
+              rowKey="id"
+              size="small"
+              columns={docsColumns}
+              dataSource={data.documents}
+              pagination={{ pageSize: 5 }}
+              scroll={isMobile ? { x: 600 } : undefined}
+            />
+          </Panel>
+
+          {/* DID */}
+          <Panel header="🆔 Digital Identity" key="did">
+            <DIDViewer
+              initialDid={
+                (data.events?.[0]?.ilmd as any)?.dpp?.digital_identity?.did || null
+              }
+            />
+          </Panel>
+        </Collapse>
+      </div>
+    </>
   );
 }
