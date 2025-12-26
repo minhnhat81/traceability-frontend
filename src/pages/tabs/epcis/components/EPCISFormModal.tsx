@@ -117,7 +117,12 @@ export default function EPCISFormModal({
    * ON OPEN → SET FORM DATA
    ================================== */
   useEffect(() => {
-    if (!open) return;
+  if (!open) {
+    setViewing(null);     // 🔥 BẮT BUỘC
+    setDppValues({});
+    form.resetFields();
+    return;
+  }
 
     if (!editing) {
       form.setFieldsValue(initVals);
