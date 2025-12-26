@@ -307,6 +307,7 @@ const canCreate = useMemo(() => {
       />
 
       <EPCISFormModal
+        key={editing ? `edit-${editing.event_id}` : "add"}
         open={modalOpen}
         editing={editing}
         batchCode={batchCode}
