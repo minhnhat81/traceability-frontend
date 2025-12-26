@@ -3,7 +3,7 @@ import { Button } from "antd";
 import { UserOutlined, LogoutOutlined } from "@ant-design/icons";
 import { useAuth } from "../store/auth";
 
-export default function Topbar() {
+export default function Toptabs() {
   const { user, clearAuth, authInitialized } = useAuth();
 
   if (!authInitialized) return null;
@@ -25,7 +25,7 @@ export default function Topbar() {
           icon={<LogoutOutlined />}
           onClick={() => {
             clearAuth();
-            window.location.href = "/login";
+            window.location.href = "/#/login";
           }}
         >
           Logout

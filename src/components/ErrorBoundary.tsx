@@ -1,45 +1,38 @@
-import React from "react"
+import React, { Component, ReactNode } from "react";
 
-interface ErrorBoundaryState {
-  hasError: boolean
-  error?: Error
+interface Props {
+  children?: ReactNode;
 }
 
-export class ErrorBoundary extends React.Component<
-  React.PropsWithChildren,
-  ErrorBoundaryState
-> {
-  constructor(props: React.PropsWithChildren) {
-    super(props)
-    this.state = { hasError: false }
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("ErrorBoundary caught an error", error, info)
+    console.error("ErrorBoundary caught:", error, info);
   }
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-600">
-            Something went wrong.
-          </h2>
-          {this.state.error && (
-            <pre className="text-sm text-gray-600 mt-2">
-              {this.state.error.message}
-            </pre>
-          )}
+        <div style={{ padding: 24 }}>
+          <h1>Something went wrong.</h1>
+          <pre>{this.state.error?.message}</pre>
         </div>
-      )
+      );
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }
-
-export default ErrorBoundary
