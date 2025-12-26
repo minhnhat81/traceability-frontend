@@ -1,38 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Button,
+  Form,
+  Input,
   Modal,
   Select,
   Space,
   Table,
   Tag,
   Upload,
-  Typography,
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { UploadOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import { UploadOutlined } from "@ant-design/icons";
 import { api } from "../../api";
 
-const { Text } = Typography;
-
-/* ============================
-   Types
-============================ */
 type DocItem = {
+  id?: number;
   file_hash: string;
   file_name: string;
   file_type: string;
   file_size: number;
   created_at: string;
   path: string;
+  doc_bundle_id?: string;
   vc_hash_hex?: string | null;
   vc_status?: "DRAFT" | "SIGNED" | "VERIFIED";
 };
 
-/* ============================
-   Component
-============================ */
 export default function DocumentsTab({
   batchCode,
   onRefreshDocs,
@@ -42,28 +37,30 @@ export default function DocumentsTab({
 }) {
   const [items, setItems] = useState<DocItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<"ALL" | "DRAFT" | "VERIFIED">("ALL");
   const [uploading, setUploading] = useState(false);
-  const [filter, setFilter] = useState<"ALL" | "DRAFT" | "SIGNED" | "VERIFIED">(
-    "ALL"
-  );
 
-  /* ============================
-     Load documents
-  ============================ */
+  const filtered = useMemo(() => {
+    if (filter === "ALL") return items;
+    return items.filter((x) =>
+      filter === "VERIFIED"
+        ? x.vc_status === "VERIFIED" || x.vc_hash_hex
+        : !x.vc_hash_hex
+    );
+  }, [items, filter]);
+
   async function load() {
     if (!batchCode) return;
     setLoading(true);
     try {
-      const r = await api().get("/api/documents", {
-        params: { page: 1, size: 50 },
-      });
-
+      // ⚠️ API gợi ý: bạn có thể filter theo batch_code ở server
+      // /api/documents?batch_code=...
+      const r = await api().get("/api/documents", { params: { page: 1, size: 50 } });
       const docs: DocItem[] =
         r.data?.items?.map((d: any) => ({
           ...d,
-          vc_status: d.vc_hash_hex ? "SIGNED" : "DRAFT",
+          vc_status: d.vc_hash_hex ? "VERIFIED" : "DRAFT",
         })) || [];
-
       setItems(docs);
     } catch (e: any) {
       message.error(e?.response?.data?.detail || "Load documents failed");
@@ -76,48 +73,83 @@ export default function DocumentsTab({
     load();
   }, [batchCode]);
 
-  /* ============================
-     Filter
-  ============================ */
-  const filtered = useMemo(() => {
-    if (filter === "ALL") return items;
-    return items.filter((d) => d.vc_status === filter);
-  }, [items, filter]);
+  const columns: ColumnsType<DocItem> = [
+    { title: "File Name", dataIndex: "file_name", key: "name" },
+    {
+      title: "Hash",
+      dataIndex: "file_hash",
+      render: (v) => <code>{v.slice(0, 10)}…</code>,
+    },
+    { title: "Type", dataIndex: "file_type" },
+    {
+      title: "Size",
+      dataIndex: "file_size",
+      render: (v) => `${(v / 1024).toFixed(1)} KB`,
+    },
+    { title: "Bundle", dataIndex: "doc_bundle_id" },
+    {
+      title: "VC",
+      dataIndex: "vc_hash_hex",
+      render: (v) =>
+        v ? <Tag color="green">VERIFIED</Tag> : <Tag color="gold">DRAFT</Tag>,
+    },
+    {
+      title: "Actions",
+      render: (_, r) => (
+        <Space>
+          {!r.vc_hash_hex && (
+            <Button size="small" onClick={() => signVC(r)}>
+              Sign VC
+            </Button>
+          )}
+          <Button size="small" danger onClick={() => remove(r)}>
+            Delete
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
-  /* ============================
-     Issue VC (EU DPP)
-  ============================ */
-  async function issueVC(row: DocItem) {
+  async function signVC(row: DocItem) {
+    try {
+      // gợi ý: API issue VC theo hash
+      await api().post("/api/vc/issue", {
+        subject: `did:example:batch:${batchCode}`,
+        type: "DocumentCredential",
+        hash_hex: row.file_hash,
+      });
+      message.success("VC signed");
+      load();
+      onRefreshDocs && onRefreshDocs();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Sign VC failed");
+    }
+  }
+
+  async function remove(row: DocItem) {
     Modal.confirm({
-      title: "Issue Verifiable Credential?",
-      content:
-        "This will cryptographically sign the document hash and make it immutable.",
+      title: "Delete this document?",
       onOk: async () => {
         try {
-          await api().post("/api/vc/issue", {
-            subject: `did:example:batch:${batchCode}`,
-            type: "DocumentCredential",
-            hash_hex: row.file_hash,
-          });
-          message.success("VC issued");
+          // bạn có thể tạo endpoint DELETE /api/documents/{hash}
+          await api().delete(`/api/documents/${row.file_hash}`);
+          message.success("Deleted");
           load();
-          onRefreshDocs?.();
         } catch (e: any) {
-          message.error(e?.response?.data?.detail || "Issue VC failed");
+          message.error(e?.response?.data?.detail || "Delete failed");
         }
       },
     });
   }
 
-  /* ============================
-     Upload
-  ============================ */
   async function customUpload({ file }: any) {
     if (!batchCode) return message.warning("Select batch first");
     setUploading(true);
     try {
       const fd = new FormData();
+      // Backend của bạn dùng `files` (list) → thêm 1 phần tử
       fd.append("files", file);
+      // Có thể đính kèm batchCode trong query/headers nếu muốn
       await api().post("/api/documents/upload", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -130,65 +162,6 @@ export default function DocumentsTab({
     }
   }
 
-  /* ============================
-     Table columns
-  ============================ */
-  const columns: ColumnsType<DocItem> = [
-    {
-      title: "Document",
-      dataIndex: "file_name",
-      render: (v) => <Text strong>{v}</Text>,
-    },
-    {
-      title: "Hash",
-      dataIndex: "file_hash",
-      render: (v) => <Text code>{v.slice(0, 12)}…</Text>,
-    },
-    {
-      title: "Type",
-      dataIndex: "file_type",
-    },
-    {
-      title: "Size",
-      dataIndex: "file_size",
-      render: (v) => `${(v / 1024).toFixed(1)} KB`,
-    },
-    {
-      title: "Status",
-      dataIndex: "vc_status",
-      render: (v) => {
-        if (v === "VERIFIED") return <Tag color="green">VERIFIED</Tag>;
-        if (v === "SIGNED") return <Tag color="blue">SIGNED</Tag>;
-        return <Tag color="gold">DRAFT</Tag>;
-      },
-    },
-    {
-      title: "Actions",
-      render: (_, r) => (
-        <Space>
-          {r.vc_status === "DRAFT" && (
-            <Button
-              size="small"
-              icon={<SafetyCertificateOutlined />}
-              onClick={() => issueVC(r)}
-            >
-              Issue VC
-            </Button>
-          )}
-
-          {r.vc_status !== "DRAFT" && (
-            <Button size="small" disabled>
-              VC Linked
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ];
-
-  /* ============================
-     Render
-  ============================ */
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <Space wrap>
@@ -198,15 +171,13 @@ export default function DocumentsTab({
           options={[
             { value: "ALL", label: "All" },
             { value: "DRAFT", label: "Draft" },
-            { value: "SIGNED", label: "Signed" },
             { value: "VERIFIED", label: "Verified" },
           ]}
           style={{ width: 160 }}
         />
-
-        <Upload customRequest={customUpload} showUploadList={false}>
+        <Upload customRequest={customUpload} showUploadList={false} multiple>
           <Button loading={uploading} icon={<UploadOutlined />}>
-            Upload document
+            Upload documents
           </Button>
         </Upload>
       </Space>
