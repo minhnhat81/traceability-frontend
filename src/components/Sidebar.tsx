@@ -49,20 +49,13 @@ type SidebarProps = {
 
 const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
   const user = useAuth().user;
-
-  // Role lấy từ user.role
   const role = (user?.role?.toLowerCase() as Role) || "supplier";
-
-  // Menu phân quyền
   const dynamicMenu: MenuNode = getAdminMenu(role);
 
-  // ============================
-  // RENDER ITEM
-  // ============================
   const renderMenu = (nodes: MenuNode[]) => (
     <ul className="space-y-1">
       {nodes.map((node) => {
-        const iconNode = ICON_MAP[node.key]; // icon theo key
+        const iconNode = ICON_MAP[node.key];
 
         return (
           <li key={node.key}>
@@ -102,7 +95,7 @@ const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
   return (
     <aside
       className={`
-        w-64 border-r bg-white px-4 pt-6 pb-4 
+        w-64 bg-white border-r px-4 pt-6 pb-4
         sidebar-scroll select-none
         ${className}
       `}
