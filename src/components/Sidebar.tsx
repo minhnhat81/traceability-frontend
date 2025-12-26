@@ -1,11 +1,9 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { MenuNode } from "./menu/types";
-
 import { getAdminMenu } from "./menu/adminMenu";
 import { useAuth } from "../store/auth";
 import { Role } from "./menu/permissions";
-
 import {
   UserOutlined,
   TeamOutlined,
@@ -21,29 +19,24 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 
-// ==========================
-// MAP ICON THEO MENU KEY
-// ==========================
 const ICON_MAP: Record<string, React.ReactNode> = {
-  "admin-users": <UserOutlined className="menu-icon" />,
-  "admin-suppliers": <TeamOutlined className="menu-icon" />,
-  "sup-farm": <EnvironmentOutlined className="menu-icon" />,
-  "admin-supply-map": <AppstoreOutlined className="menu-icon" />,
-  "admin-batchlist": <DropboxOutlined className="menu-icon" />,
-  "admin-material": <TagsOutlined className="menu-icon" />,
-  "admin-epcisevents": <QrcodeOutlined className="menu-icon" />,
-  "admin-dpptemplates": <FileDoneOutlined className="menu-icon" />,
-  "admin-dpp-list": <ProfileOutlined className="menu-icon" />,
-  "admin-customportal": <AppstoreOutlined className="menu-icon" />,
-  "admin-reports": <BarChartOutlined className="menu-icon" />,
-  "admin-blockchainconfigs": <DatabaseOutlined className="menu-icon" />,
-  "sup-systemconfigs": <SettingOutlined className="menu-icon" />,
+  "admin-users": <UserOutlined />,
+  "admin-suppliers": <TeamOutlined />,
+  "sup-farm": <EnvironmentOutlined />,
+  "admin-supply-map": <AppstoreOutlined />,
+  "admin-batchlist": <DropboxOutlined />,
+  "admin-material": <TagsOutlined />,
+  "admin-epcisevents": <QrcodeOutlined />,
+  "admin-dpptemplates": <FileDoneOutlined />,
+  "admin-dpp-list": <ProfileOutlined />,
+  "admin-customportal": <AppstoreOutlined />,
+  "admin-reports": <BarChartOutlined />,
+  "admin-blockchainconfigs": <DatabaseOutlined />,
+  "sup-systemconfigs": <SettingOutlined />,
 };
 
 type SidebarProps = {
-  /** className để AppLayout quyết định show/hide theo desktop/mobile */
   className?: string;
-  /** đóng drawer khi click menu (mobile) */
   onNavigate?: () => void;
 };
 
@@ -54,53 +47,47 @@ const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
 
   const renderMenu = (nodes: MenuNode[]) => (
     <ul className="space-y-1">
-      {nodes.map((node) => {
-        const iconNode = ICON_MAP[node.key];
-
-        return (
-          <li key={node.key}>
-            {node.path ? (
-              <NavLink
-                to={node.path}
-                onClick={() => onNavigate?.()}
-                className={({ isActive }) =>
-                  `
-                  sidebar-item flex items-center gap-3 px-3 py-2 rounded-md 
-                  transition-all duration-200 cursor-pointer
-                  ${isActive ? "sidebar-active" : "text-gray-700 hover:bg-gray-50"}
-                `
-                }
-              >
-                {iconNode && (
-                  <span className="text-lg flex items-center justify-center">
-                    {iconNode}
-                  </span>
-                )}
-                <span className="text-sm font-medium">{node.label}</span>
-              </NavLink>
-            ) : (
-              <>
-                <p className="mt-4 mb-2 text-xs font-semibold uppercase text-gray-500 px-1">
-                  {node.label}
-                </p>
-                {node.children && renderMenu(node.children)}
-              </>
-            )}
-          </li>
-        );
-      })}
+      {nodes.map((node) => (
+        <li key={node.key}>
+          {node.path ? (
+            <NavLink
+              to={node.path}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-md
+                 ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"}`
+              }
+            >
+              {ICON_MAP[node.key]}
+              <span>{node.label}</span>
+            </NavLink>
+          ) : (
+            <>
+              <p className="mt-4 mb-2 text-xs font-semibold uppercase text-gray-400">
+                {node.label}
+              </p>
+              {node.children && renderMenu(node.children)}
+            </>
+          )}
+        </li>
+      ))}
     </ul>
   );
 
   return (
     <aside
       className={`
-        w-64 bg-white border-r px-4 pt-6 pb-4
-        sidebar-scroll select-none
+        fixed md:static
+        top-0 left-0
+        h-full w-64
+        bg-white border-r
+        px-4 pt-6 pb-4
+        z-50
+        transform transition-transform duration-300
         ${className}
       `}
     >
-      <h2 className="text-xs font-semibold text-gray-400 uppercase px-2 mb-3">
+      <h2 className="text-xs font-semibold text-gray-400 uppercase mb-3">
         {dynamicMenu.label}
       </h2>
 
