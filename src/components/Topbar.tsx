@@ -8,6 +8,7 @@ interface TopbarProps {
 
 export default function Topbar({ onMenuClick }: TopbarProps) {
   const { user, clearAuth, authInitialized } = useAuth();
+  console.log("🔥 TOPBAR NEW RENDERED");
 
   if (!authInitialized) return null;
 
