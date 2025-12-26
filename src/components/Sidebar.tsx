@@ -76,17 +76,13 @@ const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
 
   return (
     <aside
-      className={`
-        fixed md:static
-        top-0 left-0
-        h-full w-64
-        bg-white border-r
-        px-4 pt-6 pb-4
-        z-50
-        transform transition-transform duration-300
-        ${className}
-      `}
-    >
+  className={`
+    ${className}
+    sidebar-scroll
+    select-none
+  `}
+>
+
       <h2 className="text-xs font-semibold text-gray-400 uppercase mb-3">
         {dynamicMenu.label}
       </h2>

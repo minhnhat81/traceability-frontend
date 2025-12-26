@@ -19,12 +19,23 @@ export default function AppLayout({ children }: { children?: React.ReactNode }) 
 
         {/* ===== SIDEBAR MOBILE (DRAWER) ===== */}
         {openSidebar && (
-  <div className="fixed inset-0 z-40 md:hidden">
+  <div className="fixed inset-0 z-50 md:hidden">
+    {/* BACKDROP */}
     <div
       className="absolute inset-0 bg-black/40"
       onClick={() => setOpenSidebar(false)}
     />
-    <Sidebar onNavigate={() => setOpenSidebar(false)} />
+
+    {/* SIDEBAR */}
+    <Sidebar
+      className="
+        mobile-sidebar
+        fixed top-0 left-0 h-full
+        w-64 bg-white
+        transform translate-x-0
+      "
+      onNavigate={() => setOpenSidebar(false)}
+    />
   </div>
 )}
 
