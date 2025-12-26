@@ -102,7 +102,7 @@ export default function DocumentsTab({
               Sign VC
             </Button>
           )}
-          <Button size="small" danger disabled={!!r.vc_hash_hex || !!r.doc_bundle_id} onClick={() => remove(r)}>
+          <Button size="small" danger onClick={() => remove(r)}>
             Delete
           </Button>
         </Space>
