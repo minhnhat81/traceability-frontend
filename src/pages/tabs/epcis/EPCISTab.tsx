@@ -311,7 +311,7 @@ const canCreate = useMemo(() => {
         editing={editing}
         batchCode={batchCode}
         batchStatus={meta.batch_status || batchStatus}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {setModalOpen(false); setEditing(null); }}
         onReload={() => {
           fetchEvents();
           fetchUsage();
