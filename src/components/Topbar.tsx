@@ -16,7 +16,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const role = user?.role || "guest";
 
   return (
-    <header className="bg-white shadow px-6 py-3 flex justify-between items-center">
+    <header className="bg-white shadow px-6 py-3 flex justify-between items-center sticky top-0 z-50">
       <div className="flex items-center gap-3">
         {/* ☰ MOBILE MENU */}
         <button

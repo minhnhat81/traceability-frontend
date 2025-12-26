@@ -7,17 +7,18 @@ export default function AppLayout({ children }: { children?: React.ReactNode }) 
   const [openSidebar, setOpenSidebar] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* TOP BAR */}
-      <Topbar
-  onMenuClick={() => {
-    console.log("MENU CLICKED"); // 👈 BẮT BUỘC LOG RA
-    setOpenSidebar(true);
-  }}
-/>
+      <Topbar onMenuClick={() => {
+  console.log("MENU CLICKED");
+  setOpenSidebar(true);
+}} />
 
 
-      <div className="flex flex-1 relative">
+
+
+
+      <div className="flex relative">
         {/* ===== SIDEBAR DESKTOP ===== */}
         <div className="hidden md:block">
           <Sidebar />
