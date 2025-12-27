@@ -2,11 +2,16 @@ import * as React from "react";
 
 type DialogSize = "sm" | "md" | "lg";
 
+type DialogBaseProps = {
+  children: React.ReactNode;
+  className?: string;
+};
+
 export const Dialog = ({
   open,
   onOpenChange,
   children,
-  size = "lg", // 👈 mặc định giữ nguyên hành vi cũ
+  size = "lg",
 }: {
   open: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -15,13 +20,12 @@ export const Dialog = ({
 }) => {
   if (!open) return null;
 
-  // ✅ Size mapping – KHÔNG ảnh hưởng modal khác
   const sizeClass =
     size === "sm"
       ? "w-[95vw] max-w-[600px]"
       : size === "md"
       ? "w-[90vw] max-w-[800px]"
-      : "w-[85vw] max-w-[1000px]"; // 👈 y hệt code cũ
+      : "w-[85vw] max-w-[1000px]";
 
   return (
     <div
@@ -47,33 +51,50 @@ export const Dialog = ({
   );
 };
 
+/* ================= CONTENT ================= */
+
 export const DialogContent = ({
   children,
   className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
+}: DialogBaseProps) => (
   <div className={`flex-1 overflow-x-hidden ${className}`}>
     {children}
   </div>
 );
 
-export const DialogHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="mb-4">{children}</div>
+/* ================= HEADER ================= */
+
+export const DialogHeader = ({
+  children,
+  className = "",
+}: DialogBaseProps) => (
+  <div className={`mb-4 ${className}`}>{children}</div>
 );
 
-export const DialogTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-xl font-semibold mb-2">{children}</h3>
+/* ================= TITLE ================= */
+
+export const DialogTitle = ({
+  children,
+  className = "",
+}: DialogBaseProps) => (
+  <h3 className={`text-xl font-semibold mb-2 ${className}`}>
+    {children}
+  </h3>
 );
 
-export const DialogFooter = ({ children }: { children: React.ReactNode }) => (
+/* ================= FOOTER ================= */
+
+export const DialogFooter = ({
+  children,
+  className = "",
+}: DialogBaseProps) => (
   <div
-    className="
+    className={`
       flex justify-end gap-2 mt-6
       sticky bottom-0
       bg-white pt-4 border-t
-    "
+      ${className}
+    `}
   >
     {children}
   </div>
