@@ -487,7 +487,7 @@ const isLocked = statusLocked && !adminOverride;
       {/* =============== ADD MODAL =============== */}
       <Dialog open={openAdd} onOpenChange={setOpenAdd}>
         <DialogContent>
-         <div className="mx-auto w-full max-w-2xl">
+         <div className="mx-auto w-full max-w-[560px] px-2">
           <DialogHeader>
             <DialogTitle>Add New Batch</DialogTitle>
           </DialogHeader>
@@ -618,7 +618,7 @@ const isLocked = statusLocked && !adminOverride;
       {/* =============== EDIT MODAL =============== */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
         <DialogContent>
-         <div className="mx-auto w-full max-w-2xl">
+         <div className="mx-auto w-full max-w-[560px] px-2">
           <DialogHeader>
             <DialogTitle>Edit Batch</DialogTitle>
           </DialogHeader>
