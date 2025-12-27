@@ -296,7 +296,7 @@ export default function EPCISFormModal({
       ) : (
         <Form form={form} layout="vertical" initialValues={initVals}>
           <Row gutter={12}>
-            <Col span={14}>
+            <Col span={24}>
               {/* EVENT TYPE + ACTION */}
               <Row gutter={12}>
                 <Col span={12}>
