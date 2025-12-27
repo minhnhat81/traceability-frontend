@@ -485,7 +485,7 @@ const isLocked = statusLocked && !adminOverride;
       </Card>
 
       {/* =============== ADD MODAL =============== */}
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      <Dialog open={openAdd} onOpenChange={setOpenAdd} size="sm">
         <DialogContent>
          <div className="mx-auto w-full max-w-[560px] px-2">
           <DialogHeader>
@@ -616,7 +616,7 @@ const isLocked = statusLocked && !adminOverride;
       </Dialog>
 
       {/* =============== EDIT MODAL =============== */}
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+      <Dialog open={openEdit} onOpenChange={setOpenEdit} size="sm">
         <DialogContent>
          <div className="mx-auto w-full max-w-[560px] px-2">
           <DialogHeader>
