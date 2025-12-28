@@ -25,6 +25,7 @@ const EVENT_TYPES = [
 const ACTIONS = ["ADD", "OBSERVE", "DELETE"];
 const BIZ_TEMPLATES = [
   { value: "commissioning", label: "Commissioning" },
+  { value: "harvesting", label: "Harvesting" },
   { value: "receiving", label: "Receiving" },
   { value: "manufacturing", label: "Manufacturing" },
   { value: "transforming", label: "Transforming" },
@@ -51,6 +52,12 @@ const TEMPLATE_CONFIG = {
   receiving: {
     action: "OBSERVE",
     bizStep: "urn:epcglobal:cbv:bizstep:receiving",
+    disposition: "urn:epcglobal:cbv:disp:active",
+    type: "ObjectEvent",
+  },
+  harvesting: {
+    action: "ADD",
+    bizStep: "urn:epcglobal:cbv:bizstep:harvesting",
     disposition: "urn:epcglobal:cbv:disp:active",
     type: "ObjectEvent",
   },
