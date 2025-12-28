@@ -16,8 +16,13 @@ export type Group =
   | "supply_chain"
   | "schema_metadata";
 
+/**
+ * ✅ EventType dùng cho DPP mapping
+ * Đã bổ sung: harvesting
+ */
 export type EventType =
   | "commissioning"
+  | "harvesting"        // ✅ ADD
   | "transformation"
   | "packing"
   | "aggregation"
@@ -38,8 +43,32 @@ export const DPP_MAPPING: Record<
       "supply_chain",
       "digital_identity",
     ],
-    optional: ["environmental_impact", "documentation", "schema_metadata"],
+    optional: [
+      "environmental_impact",
+      "documentation",
+      "schema_metadata",
+    ],
   },
+
+  /**
+   * 🌱 Harvesting – Thu hoạch (Farm level)
+   */
+  harvesting: {
+    required: [
+      "product_description",
+      "composition",
+      "quantity_info",
+      "supply_chain",
+      "digital_identity",
+    ],
+    optional: [
+      "environmental_impact",
+      "animal_welfare",
+      "documentation",
+      "schema_metadata",
+    ],
+  },
+
   transformation: {
     required: [
       "product_description",
@@ -55,6 +84,7 @@ export const DPP_MAPPING: Record<
       "cost_info",
     ],
   },
+
   packing: {
     required: [
       "product_description",
@@ -62,12 +92,27 @@ export const DPP_MAPPING: Record<
       "digital_identity",
       "transport",
     ],
-    optional: ["documentation", "supply_chain", "schema_metadata", "environmental_impact"],
+    optional: [
+      "documentation",
+      "supply_chain",
+      "schema_metadata",
+      "environmental_impact",
+    ],
   },
+
   aggregation: {
-    required: ["product_description", "quantity_info", "digital_identity"],
-    optional: ["transport", "documentation", "schema_metadata"],
+    required: [
+      "product_description",
+      "quantity_info",
+      "digital_identity",
+    ],
+    optional: [
+      "transport",
+      "documentation",
+      "schema_metadata",
+    ],
   },
+
   shipping: {
     required: [
       "product_description",
@@ -76,8 +121,13 @@ export const DPP_MAPPING: Record<
       "supply_chain",
       "digital_identity",
     ],
-    optional: ["environmental_impact", "schema_metadata", "cost_info"],
+    optional: [
+      "environmental_impact",
+      "schema_metadata",
+      "cost_info",
+    ],
   },
+
   receiving: {
     required: [
       "product_description",
@@ -85,8 +135,12 @@ export const DPP_MAPPING: Record<
       "supply_chain",
       "digital_identity",
     ],
-    optional: ["transport", "schema_metadata"],
+    optional: [
+      "transport",
+      "schema_metadata",
+    ],
   },
+
   customs: {
     required: [
       "product_description",
@@ -94,10 +148,22 @@ export const DPP_MAPPING: Record<
       "supply_chain",
       "schema_metadata",
     ],
-    optional: ["transport", "digital_identity", "environmental_impact"],
+    optional: [
+      "transport",
+      "digital_identity",
+      "environmental_impact",
+    ],
   },
+
   observation: {
-    required: ["end_of_life", "digital_identity", "schema_metadata"],
-    optional: ["environmental_impact", "documentation"],
+    required: [
+      "end_of_life",
+      "digital_identity",
+      "schema_metadata",
+    ],
+    optional: [
+      "environmental_impact",
+      "documentation",
+    ],
   },
 };

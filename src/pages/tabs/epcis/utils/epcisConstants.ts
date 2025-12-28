@@ -9,6 +9,7 @@ export const ACTIONS = ["ADD", "OBSERVE", "DELETE"];
 
 export const BIZ_STEPS = [
   { label: "Commissioning", value: "urn:epcglobal:cbv:bizstep:commissioning" },
+  { label: "Harvesting", value: "urn:epcglobal:cbv:bizstep:harvesting" },
   { label: "Receiving", value: "urn:epcglobal:cbv:bizstep:receiving" },
   { label: "Manufacturing", value: "urn:epcglobal:cbv:bizstep:manufacturing" },
   { label: "Packing", value: "urn:epcglobal:cbv:bizstep:packing" },
