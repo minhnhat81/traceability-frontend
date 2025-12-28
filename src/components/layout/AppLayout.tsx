@@ -1,22 +1,28 @@
-import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import Topbar from "../Topbar";
 import Sidebar from "../Sidebar";
 
 export default function AppLayout({ children }: { children?: React.ReactNode }) {
+  console.log("🔥 APP LAYOUT ACTIVE 🔥");
+
   const [openSidebar, setOpenSidebar] = useState(false);
+  const location = useLocation();
+
+  // ✅ RESET sidebar khi đổi route (FIX MÀN HÌNH TỐI)
+  useEffect(() => {
+    setOpenSidebar(false);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* TOP BAR */}
-      <Topbar onMenuClick={() => {
-  console.log("MENU CLICKED");
-  setOpenSidebar(true);
-}} />
-
-
-
-
+      <Topbar
+        onMenuClick={() => {
+          console.log("MENU CLICKED");
+          setOpenSidebar(true);
+        }}
+      />
 
       <div className="flex relative">
         {/* ===== SIDEBAR DESKTOP ===== */}
@@ -26,26 +32,25 @@ export default function AppLayout({ children }: { children?: React.ReactNode }) 
 
         {/* ===== SIDEBAR MOBILE (DRAWER) ===== */}
         {openSidebar && (
-  <div className="fixed inset-0 z-50 md:hidden">
-    {/* BACKDROP */}
-    <div
-      className="absolute inset-0 bg-black/40"
-      onClick={() => setOpenSidebar(false)}
-    />
+          <div className="fixed inset-0 z-50 md:hidden">
+            {/* BACKDROP */}
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setOpenSidebar(false)}
+            />
 
-    {/* SIDEBAR */}
-    <Sidebar
-      className="
-        mobile-sidebar
-        fixed top-0 left-0 h-full
-        w-64 bg-white
-        transform translate-x-0
-      "
-      onNavigate={() => setOpenSidebar(false)}
-    />
-  </div>
-)}
-
+            {/* SIDEBAR */}
+            <Sidebar
+              className="
+                mobile-sidebar
+                fixed top-0 left-0 h-full
+                w-64 bg-white
+                transform translate-x-0
+              "
+              onNavigate={() => setOpenSidebar(false)}
+            />
+          </div>
+        )}
 
         {/* ===== MAIN CONTENT ===== */}
         <main className="main-content flex-1 overflow-auto">

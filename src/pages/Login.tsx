@@ -3,9 +3,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../store/auth";
 import { api } from "../api";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const { setToken } = useAuth();
+  const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,11 +32,11 @@ export default function Login() {
         return;
       }
 
-      // ✅ CHUẨN: chỉ set token
+      // ✅ chỉ set token
       setToken(token);
 
-      // redirect về trang chính
-      window.location.href = "/";
+      // ✅ SPA redirect (KHÔNG dùng window.location.href)
+      navigate("/", { replace: true });
     } catch (err: any) {
       console.error("LOGIN ERROR:", err?.response?.data || err);
       setError("Không thể đăng nhập. Vui lòng kiểm tra lại.");
@@ -50,7 +52,11 @@ export default function Login() {
           Traceability Login
         </h2>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form
+          onSubmit={handleLogin}
+          className="space-y-4"
+          autoComplete="off"
+        >
           <div>
             <label className="text-sm font-medium text-gray-700">
               Tên đăng nhập
@@ -59,6 +65,7 @@ export default function Login() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              autoComplete="off"
             />
           </div>
 
@@ -71,6 +78,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="new-password"
             />
           </div>
 
