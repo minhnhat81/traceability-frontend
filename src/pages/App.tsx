@@ -33,7 +33,7 @@ import PublicQRRedirect from "../pages/PublicQRRedirect";
 import PublicConsumerDppPage from "../pages/PublicConsumerDppPage";
 
 export default function App() {
-  const { token, authInitialized, initAuth } = useAuth();
+  const { token, user, authInitialized, initAuth } = useAuth();
 
   useEffect(() => {
     initAuth();
@@ -42,6 +42,9 @@ export default function App() {
   if (!authInitialized) {
     return <div className="p-4 text-center text-gray-500">Initializing…</div>;
   }
+
+  const isAdmin =
+    user?.role === "admin" || user?.role === "superadmin";
 
   return (
     <Routes>
@@ -55,7 +58,10 @@ export default function App() {
       <Route path="/consumer/map" element={<MapViewPage />} />
       <Route path="/consumer/certifications" element={<CertificationsPage />} />
       <Route path="/consumer/repair" element={<RepairRecyclePage />} />
-      <Route path="/consumer/blockchain-proof" element={<BlockchainProofPage />} />
+      <Route
+        path="/consumer/blockchain-proof"
+        element={<BlockchainProofPage />}
+      />
 
       {/* ===== ADMIN (AppLayout) ===== */}
       <Route
@@ -75,7 +81,15 @@ export default function App() {
         <Route path="supplier/farms" element={<Farms />} />
         <Route path="users" element={<Users />} />
         <Route path="suppliers" element={<Suppliers />} />
-        <Route path="dpp_templates" element={<DPPTemplates />} />
+
+        {/* 🔐 DPP Templates — chỉ admin & superadmin */}
+        <Route
+          path="dpp_templates"
+          element={
+            isAdmin ? <DPPTemplates /> : <Navigate to="/" replace />
+          }
+        />
+
         <Route path="material" element={<MaterialPage />} />
         <Route path="dpp_list" element={<DppListPage />} />
       </Route>

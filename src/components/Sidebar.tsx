@@ -40,6 +40,10 @@ type SidebarProps = {
   onNavigate?: () => void;
 };
 
+/** 🔐 chỉ admin & superadmin được thấy DPP Templates */
+const canAccessDppTemplates = (role: Role) =>
+  role === "admin" || role === "superadmin";
+
 const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
   const user = useAuth().user;
   const role = (user?.role?.toLowerCase() as Role) || "supplier";
@@ -47,42 +51,53 @@ const Sidebar = ({ className = "", onNavigate }: SidebarProps) => {
 
   const renderMenu = (nodes: MenuNode[]) => (
     <ul className="space-y-1">
-      {nodes.map((node) => (
-        <li key={node.key}>
-          {node.path ? (
-            <NavLink
-              to={node.path}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md
-                 ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"}`
-              }
-            >
-              {ICON_MAP[node.key]}
-              <span>{node.label}</span>
-            </NavLink>
-          ) : (
-            <>
-              <p className="mt-4 mb-2 text-xs font-semibold uppercase text-gray-400">
-                {node.label}
-              </p>
-              {node.children && renderMenu(node.children)}
-            </>
-          )}
-        </li>
-      ))}
+      {nodes
+        .filter((node) => {
+          // 🔐 Ẩn menu DPP Templates với role khác admin/superadmin
+          if (node.key === "admin-dpptemplates") {
+            return canAccessDppTemplates(role);
+          }
+          return true;
+        })
+        .map((node) => (
+          <li key={node.key}>
+            {node.path ? (
+              <NavLink
+                to={node.path}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-md
+                  ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`
+                }
+              >
+                {ICON_MAP[node.key]}
+                <span>{node.label}</span>
+              </NavLink>
+            ) : (
+              <>
+                <p className="mt-4 mb-2 text-xs font-semibold uppercase text-gray-400">
+                  {node.label}
+                </p>
+                {node.children && renderMenu(node.children)}
+              </>
+            )}
+          </li>
+        ))}
     </ul>
   );
 
   return (
     <aside
-  className={`
-    ${className}
-    sidebar-scroll
-    select-none
-  `}
->
-
+      className={`
+        ${className}
+        sidebar-scroll
+        select-none
+      `}
+    >
       <h2 className="text-xs font-semibold text-gray-400 uppercase mb-3">
         {dynamicMenu.label}
       </h2>
