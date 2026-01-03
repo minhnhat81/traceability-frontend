@@ -296,7 +296,7 @@ export default function DPPTemplatesPage() {
             <Space size="large" wrap>
               <Form.Item label="Tier" name="tier">
                 <Select
-                  options={['supplier', 'manufacturer', 'brand'].map((v) => ({ value: v, label: v }))}
+                  options={['farm','supplier', 'manufacturer', 'brand'].map((v) => ({ value: v, label: v }))}
                   style={{ width: 200 }}
                 />
               </Form.Item>
