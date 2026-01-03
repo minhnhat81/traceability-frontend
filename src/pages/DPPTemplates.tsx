@@ -27,6 +27,7 @@ import {
 } from '@/services/dpp_templatesService'
 import { DPP_STATIC_GROUPS, DPP_DYNAMIC_GROUPS } from '@constants/dppGroups'
 
+
 type FormState = Partial<DppTemplate>
 
 /** ✅ Default JSON structure */
