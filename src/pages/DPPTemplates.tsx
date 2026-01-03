@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Table,
   Button,
@@ -17,6 +17,7 @@ import {
   Tooltip,
 } from 'antd'
 import { InfoCircleOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/icons'
+import * as XLSX from 'xlsx'
 import {
   listDppTemplates,
   createDppTemplate,
@@ -159,6 +160,9 @@ export default function DPPTemplatesPage() {
   const [form] = Form.useForm<FormState>()
   const [jsonMode, setJsonMode] = useState({ static: '', dynamic: '' })
 
+  // ✅ input file hidden để import
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   async function reload() {
     setLoading(true)
     try {
@@ -245,6 +249,208 @@ export default function DPPTemplatesPage() {
     }
   }
 
+  /** ==========================
+   * XLS EXPORT/IMPORT (ADDED)
+   ========================== */
+
+  function exportTemplateXLS() {
+    try {
+      const wb = XLSX.utils.book_new()
+
+      // 1) META
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet([
+          {
+            name: '',
+            tier: 'supplier',
+            template_name: 'default',
+            is_active: true,
+            description: '',
+          },
+        ]),
+        'META'
+      )
+
+      // 2) static groups (simple fields)
+      DPP_STATIC_GROUPS.forEach((g) => {
+        // composition & social_impact certifications sẽ có sheet riêng (list)
+        if (g.key === 'composition' || g.key === 'social_impact') return
+
+        const row = Object.fromEntries(
+          (g.fields || []).map((f: any) => [`${g.key}.${f.name}`, ''])
+        )
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([row]), `static_${g.key}`)
+      })
+
+      // 3) dynamic groups
+      DPP_DYNAMIC_GROUPS.forEach((g) => {
+        // documentation & supply_chain là list → sheet riêng
+        if (g.key === 'documentation' || g.key === 'supply_chain') return
+
+        const row = Object.fromEntries(
+          (g.fields || []).map((f: any) => [`${g.key}.${f.name}`, ''])
+        )
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([row]), `dynamic_${g.key}`)
+      })
+
+      // 4) composition materials_block (list)
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet([
+          { name: 'Cotton', percentage: 80 },
+          { name: 'Polyester', percentage: 20 },
+        ]),
+        'static_composition_materials'
+      )
+
+      // 5) social_impact certifications (list)
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet([
+          { name: 'OEKO-TEX® Standard 100', number: '17.HVN.12345', issued_by: 'TESTEX' },
+        ]),
+        'static_social_certifications'
+      )
+
+      // 6) documentation (list)
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet([
+          { file: 'certificate.pdf', issued_by: 'SGS' },
+        ]),
+        'dynamic_documentation'
+      )
+
+      // 7) supply_chain (list)
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet([
+          { tier: 1, supplier: 'Cotton Supplier Ltd.', updated_at: '2025-01-01' },
+        ]),
+        'dynamic_supply_chain'
+      )
+
+      XLSX.writeFile(wb, 'DPP_TEMPLATE_SAMPLE.xlsx')
+      message.success('Exported XLS sample')
+    } catch (e) {
+      console.error(e)
+      message.error('Export failed')
+    }
+  }
+
+  async function importTemplateXLS(e: React.ChangeEvent<HTMLInputElement>) {
+    try {
+      const file = e.target.files?.[0]
+      if (!file) return
+
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf)
+
+      const meta = XLSX.utils.sheet_to_json<any>(wb.Sheets['META'] || {})[0] || {}
+
+      const staticData = ensureGroupDefaults()
+      const dynamicData = ensureGroupDefaults()
+
+      // simple static sheets: static_xxx
+      DPP_STATIC_GROUPS.forEach((g) => {
+        if (g.key === 'composition' || g.key === 'social_impact') return
+        const sheetName = `static_${g.key}`
+        const sheet = wb.Sheets[sheetName]
+        if (!sheet) return
+        const row = XLSX.utils.sheet_to_json<any>(sheet)[0] || {}
+        ;(g.fields || []).forEach((f: any) => {
+          const k = `${g.key}.${f.name}`
+          if (row[k] !== undefined) staticData[g.key][f.name] = row[k]
+        })
+      })
+
+      // simple dynamic sheets: dynamic_xxx
+      DPP_DYNAMIC_GROUPS.forEach((g) => {
+        if (g.key === 'documentation' || g.key === 'supply_chain') return
+        const sheetName = `dynamic_${g.key}`
+        const sheet = wb.Sheets[sheetName]
+        if (!sheet) return
+        const row = XLSX.utils.sheet_to_json<any>(sheet)[0] || {}
+        ;(g.fields || []).forEach((f: any) => {
+          const k = `${g.key}.${f.name}`
+          if (row[k] !== undefined) dynamicData[g.key][f.name] = row[k]
+        })
+      })
+
+      // composition materials list
+      const compSheet = wb.Sheets['static_composition_materials']
+      if (compSheet) {
+        const rows = XLSX.utils.sheet_to_json<any>(compSheet) || []
+        staticData.composition.materials_block = rows
+          .filter((r) => String(r?.name || '').trim())
+          .map((r) => ({
+            name: String(r.name || ''),
+            percentage: Number(r.percentage || 0),
+          }))
+      }
+
+      // social certifications list
+      const certSheet = wb.Sheets['static_social_certifications']
+      if (certSheet) {
+        const rows = XLSX.utils.sheet_to_json<any>(certSheet) || []
+        staticData.social_impact.certifications = rows
+          .filter((r) => String(r?.name || '').trim())
+          .map((r) => ({
+            name: String(r.name || ''),
+            number: String(r.number || ''),
+            issued_by: String(r.issued_by || ''),
+          }))
+      }
+
+      // documentation list
+      const docSheet = wb.Sheets['dynamic_documentation']
+      if (docSheet) {
+        const rows = XLSX.utils.sheet_to_json<any>(docSheet) || []
+        dynamicData.documentation = rows
+          .filter((r) => String(r?.file || '').trim() || String(r?.issued_by || '').trim())
+          .map((r) => ({
+            file: String(r.file || ''),
+            issued_by: String(r.issued_by || ''),
+          }))
+      }
+
+      // supply_chain list
+      const scSheet = wb.Sheets['dynamic_supply_chain']
+      if (scSheet) {
+        const rows = XLSX.utils.sheet_to_json<any>(scSheet) || []
+        dynamicData.supply_chain = rows
+          .filter((r) => String(r?.supplier || '').trim())
+          .map((r) => ({
+            tier: Number(r.tier || 0),
+            supplier: String(r.supplier || ''),
+            updated_at: String(r.updated_at || ''),
+          }))
+      }
+
+      // set to form
+      form.setFieldsValue({
+        ...meta,
+        static_data: staticData,
+        dynamic_data: dynamicData,
+      })
+
+      setJsonMode({
+        static: JSON.stringify(staticData, null, 2),
+        dynamic: JSON.stringify(dynamicData, null, 2),
+      })
+
+      message.success('Imported XLS successfully')
+
+      // reset input value để chọn lại cùng file vẫn trigger
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err) {
+      console.error(err)
+      message.error('Import failed. Please check file format.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const columns = [
     { title: 'Name', dataIndex: 'name' },
     { title: 'Tier', dataIndex: 'tier' },
@@ -266,6 +472,17 @@ export default function DPPTemplatesPage() {
     <div style={{ padding: 16 }}>
       <Space style={{ marginBottom: 12 }}>
         <Button type="primary" onClick={onAdd}>New Template</Button>
+
+        {/* ✅ XLS buttons (ADDED) */}
+        <Button onClick={exportTemplateXLS}>Export XLS sample</Button>
+        <Button onClick={() => fileInputRef.current?.click()}>Import XLS</Button>
+        <input
+          ref={fileInputRef}
+          hidden
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={importTemplateXLS}
+        />
       </Space>
 
       <Table rowKey="id" dataSource={data} columns={columns} loading={loading} />
