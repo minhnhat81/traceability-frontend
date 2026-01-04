@@ -205,19 +205,32 @@ export default function DPPTemplatesPage() {
     const staticData = ensureGroupDefaults()
     const dynamicData = ensureGroupDefaults()
 
-    Object.keys(staticRow).forEach((k) => {
-      const [g, f] = k.split('.')
-      if ((staticData as any)[g]) {
-        ;(staticData as any)[g][f] = staticRow[k]
-      }
+    Object.keys(staticRow).forEach((key) => {
+      const v = (staticRow as any)[key];
+
+     // key có dạng: "group.field"
+      const [group, field] = String(key).split(".");
+
+      if (!group || !field) return;
+
+     // ✅ ép kiểu để TS không bắt lỗi
+     (staticData as any)[group][field] =
+       v ?? (typeof (staticData as any)[group][field] === "number" ? 0 : "");
+    });
+
+
+    Object.keys(dynamicRow).forEach((key) => {
+     const value = (dynamicRow as any)[key]
+     const [group, field] = String(key).split('.')
+
+     if (!group || !field) return
+     if (!(dynamicData as any)[group]) return
+
+     // ✅ ép kiểu an toàn để TS không báo lỗi string | number
+     ;(dynamicData as any)[group][field] = value ??
+       (typeof (dynamicData as any)[group][field] === 'number' ? 0 : '')
     })
 
-    Object.keys(dynamicRow).forEach((k) => {
-      const [g, f] = k.split('.')
-      if ((dynamicData as any)[g]) {
-        ;(dynamicData as any)[g][f] = dynamicRow[k]
-      }
-    })
 
     form.setFieldsValue({
       ...meta,
@@ -252,7 +265,7 @@ export default function DPPTemplatesPage() {
                 label: 'Static Data',
                 children: DPP_STATIC_GROUPS.map((g) => (
                   <Card key={g.key} size="small" title={g.label}>
-                    <GroupFields prefix={(n) => ['static_data', g.key, ...n]} fields={g.fields} groupKey={g.key} />
+                    <GroupFields prefix={(n) => ['static_data', g.key, ...n.map(String)]} fields={g.fields} groupKey={g.key} />
                   </Card>
                 )),
               },
@@ -261,7 +274,7 @@ export default function DPPTemplatesPage() {
                 label: 'Dynamic Data',
                 children: DPP_DYNAMIC_GROUPS.map((g) => (
                   <Card key={g.key} size="small" title={g.label}>
-                    <GroupFields prefix={(n) => ['dynamic_data', g.key, ...n]} fields={g.fields} groupKey={g.key} />
+                    <GroupFields prefix={(n) => ['dynamic_data', g.key, ...n.map(String)]} fields={g.fields} groupKey={g.key} />
                   </Card>
                 )),
               },
