@@ -273,11 +273,31 @@ export default function DPPTemplatesPage() {
     setOpen(true)
   }
 
-  async function onDelete(row: DppTemplate) {
-    await deleteDppTemplate(row.id)
-    message.success('Deleted')
-    reload()
-  }
+  function onDelete(row: DppTemplate) {
+  Modal.confirm({
+    title: 'Confirm delete',
+    content: (
+      <span>
+        Are you sure you want to delete DPP template{' '}
+        <b>{row.name}</b>?
+      </span>
+    ),
+    okText: 'Delete',
+    okType: 'danger',
+    cancelText: 'Cancel',
+    async onOk() {
+      try {
+        await deleteDppTemplate(row.id)
+        message.success('DPP Template deleted')
+        reload()
+      } catch (err) {
+        console.error(err)
+        message.error('Delete failed')
+      }
+    },
+  })
+}
+
 
   async function onSubmit() {
     try {
