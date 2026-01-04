@@ -207,12 +207,16 @@ export default function DPPTemplatesPage() {
 
     Object.keys(staticRow).forEach((k) => {
       const [g, f] = k.split('.')
-      if (staticData[g]) staticData[g][f] = staticRow[k]
+      if ((staticData as any)[g]) {
+        ;(staticData as any)[g][f] = staticRow[k]
+      }
     })
 
     Object.keys(dynamicRow).forEach((k) => {
       const [g, f] = k.split('.')
-      if (dynamicData[g]) dynamicData[g][f] = dynamicRow[k]
+      if ((dynamicData as any)[g]) {
+        ;(dynamicData as any)[g][f] = dynamicRow[k]
+      }
     })
 
     form.setFieldsValue({
