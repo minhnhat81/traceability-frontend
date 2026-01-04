@@ -131,6 +131,73 @@ function GroupFields({
       </Form.List>
     )
   }
+    if (groupKey === 'supply_chain') {
+    return (
+      <Form.List name={prefix([])}>
+        {(listFields, { add, remove }) => (
+          <Card
+            size="small"
+            title="Supply Chain"
+            extra={
+              <Button
+                size="small"
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  add({ tier: 0, supplier: '', updated_at: '' })
+                }
+              >
+                Add Supplier
+              </Button>
+            }
+          >
+            {listFields.map((field) => (
+              <Row gutter={12} key={field.key} style={{ marginBottom: 8 }}>
+                <Col span={6}>
+                  <Form.Item
+                    {...field}
+                    name={[field.name, 'tier']}
+                    label="Tier Level"
+                  >
+                    <InputNumber style={{ width: '100%' }} min={0} />
+                  </Form.Item>
+                </Col>
+
+                <Col span={10}>
+                  <Form.Item
+                    {...field}
+                    name={[field.name, 'supplier']}
+                    label="Supplier Name"
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+
+                <Col span={6}>
+                  <Form.Item
+                    {...field}
+                    name={[field.name, 'updated_at']}
+                    label="Updated At"
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+
+                <Col span={2} style={{ display: 'flex', alignItems: 'center' }}>
+                  <Button
+                    danger
+                    type="text"
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => remove(field.name)}
+                  />
+                </Col>
+              </Row>
+            ))}
+          </Card>
+        )}
+      </Form.List>
+    )
+  }
 
   return (
     <Row gutter={16}>
