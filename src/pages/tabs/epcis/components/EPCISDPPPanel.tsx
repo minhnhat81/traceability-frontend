@@ -164,37 +164,41 @@ const DPPPanel: React.FC<DPPPanelProps> = ({
       );
     }
 
-    if (field === "certification" && Array.isArray(value)) {
-      return (
-        <>
-          {value.map((cert: any, idx: number) => (
-            <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-              <Input
-                placeholder="Certificate name"
-                value={cert.name || ""}
-                onChange={(e) =>
-                  handleEdit(group, `cert_name_${idx}`, e.target.value)
-                }
-              />
-              <Input
-                placeholder="Certificate No"
-                value={cert.number || ""}
-                onChange={(e) =>
-                  handleEdit(group, `cert_number_${idx}`, e.target.value)
-                }
-              />
-              <Input
-                placeholder="Issued by"
-                value={cert.issued_by || ""}
-                onChange={(e) =>
-                  handleEdit(group, `cert_issued_${idx}`, e.target.value)
-                }
-              />
-            </div>
-          ))}
-        </>
-      );
-    }
+    if (field === "certifications" && Array.isArray(value)) {
+  return (
+    <>
+      {value.map((cert: any, idx: number) => (
+        <div
+          key={idx}
+          style={{ display: "flex", gap: 8, marginBottom: 4 }}
+        >
+          <Input
+            placeholder="Certificate name"
+            value={cert.name || ""}
+            onChange={(e) =>
+              handleEdit(group, `certifications_${idx}_name`, e.target.value)
+            }
+          />
+          <Input
+            placeholder="Certificate No"
+            value={cert.number || ""}
+            onChange={(e) =>
+              handleEdit(group, `certifications_${idx}_number`, e.target.value)
+            }
+          />
+          <Input
+            placeholder="Issued by"
+            value={cert.issued_by || ""}
+            onChange={(e) =>
+              handleEdit(group, `certifications_${idx}_issued_by`, e.target.value)
+            }
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
 
     return (
       <Input
