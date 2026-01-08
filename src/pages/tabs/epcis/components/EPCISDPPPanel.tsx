@@ -426,7 +426,11 @@ const DPPPanel: React.FC<DPPPanelProps> = ({
               {/* không dùng accordion để tránh block click */}
               <Collapse bordered={false} style={{ background: "transparent" }}>
                 {optionalGroups.map((group, idx) => {
-                  const groupData = selectedTemplate.dynamic_data?.[group];
+                  const groupData =
+                    selectedTemplate.static_data?.[group] ??
+                    selectedTemplate.dynamic_data?.[group] ??
+                    {};
+
                   const hasData =
                     groupData && Object.keys(groupData || {}).length > 0;
                   return (
