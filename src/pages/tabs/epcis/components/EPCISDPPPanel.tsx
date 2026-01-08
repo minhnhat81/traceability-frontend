@@ -221,6 +221,12 @@ const DPPPanel: React.FC<DPPPanelProps> = ({
         { label: "Water usage (L)", key: "water" },
         { label: "Energy consumption (kWh)", key: "energy" },
       ],
+      digital_identity: [
+        { label: "QR Code", key: "qr" },
+        { label: "DID", key: "did" },
+        { label: "IPFS CID", key: "ipfs_cid" },
+      ],
+
       circularity: [
         { label: "Recycled content (%)", key: "recycled_content" },
         { label: "Reusability (%)", key: "reusability" },
