@@ -55,6 +55,7 @@ export default function EPCISFormModal({
   const [dppValues, setDppValues] = useState({});
   const [openDpp, setOpenDpp] = useState(false);
   const [viewing, setViewing] = useState(null);
+  const [docFiles, setDocFiles] = useState<any[]>([]);
 
   /** ===============================
    * DEFAULT FORM VALUES
