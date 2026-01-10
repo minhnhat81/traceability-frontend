@@ -388,31 +388,33 @@ export default function EPCISFormModal({
     {/* Upload Button */}
     <Col>
       <Upload
-        multiple
-        showUploadList={false}
-        beforeUpload={(file) => {
-          const allowedTypes = [
-            "application/pdf",
-            "image/jpeg",
-            "image/png",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          ];
+  multiple
+  fileList={docFiles}
+  onChange={({ fileList }) => setDocFiles(fileList)}
+  beforeUpload={(file) => {
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
 
-          if (!allowedTypes.includes(file.type)) {
-            message.error("Only PDF / JPG / PNG / DOCX allowed");
-            return Upload.LIST_IGNORE;
-          }
+    if (!allowedTypes.includes(file.type)) {
+      message.error("Only PDF / JPG / PNG / DOCX allowed");
+      return Upload.LIST_IGNORE;
+    }
 
-          if (file.size / 1024 / 1024 > 10) {
-            message.error("Max file size is 10MB");
-            return Upload.LIST_IGNORE;
-          }
+    if (file.size / 1024 / 1024 > 10) {
+      message.error("Max file size is 10MB");
+      return Upload.LIST_IGNORE;
+    }
 
-          return false; // ❗ không auto upload
-        }}
-      >
-        <Button icon={<UploadOutlined />}>Upload</Button>
-      </Upload>
+    return false; // ❗ không auto upload
+  }}
+>
+  <Button icon={<UploadOutlined />}>Upload</Button>
+</Upload>
+
     </Col>
   </Row>
 </Form.Item>
