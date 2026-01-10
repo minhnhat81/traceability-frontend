@@ -30,6 +30,9 @@ import {
   stripUrn,
 } from "../utils/epcisHelpers";
 import DPPPanel from "./EPCISDPPPanel";
+import { Upload } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+
 
 export default function EPCISFormModal({
   open,
@@ -366,15 +369,54 @@ export default function EPCISFormModal({
               {/* DOC BUNDLE + TIME */}
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item name="docBundleId" label="Doc Bundle" rules={[{ required: true }]}>
-                    <Select
-                      showSearch
-                      options={bundles.map((b) => ({
-                        label: `${b.id} — ${b.desc}`,
-                        value: b.id,
-                      }))}
-                    />
-                  </Form.Item>
+                  <Form.Item
+  label="Doc Bundle"
+  required
+>
+  <Row gutter={8} align="middle">
+    {/* Select Doc Bundle */}
+    <Col flex="auto">
+      <Form.Item
+        name="doc_bundle"
+        noStyle
+        rules={[{ required: true, message: "Please select doc bundle" }]}
+      >
+        <Select placeholder="Select doc bundle" />
+      </Form.Item>
+    </Col>
+
+    {/* Upload Button */}
+    <Col>
+      <Upload
+        multiple
+        showUploadList={false}
+        beforeUpload={(file) => {
+          const allowedTypes = [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          ];
+
+          if (!allowedTypes.includes(file.type)) {
+            message.error("Only PDF / JPG / PNG / DOCX allowed");
+            return Upload.LIST_IGNORE;
+          }
+
+          if (file.size / 1024 / 1024 > 10) {
+            message.error("Max file size is 10MB");
+            return Upload.LIST_IGNORE;
+          }
+
+          return false; // ❗ không auto upload
+        }}
+      >
+        <Button icon={<UploadOutlined />}>Upload</Button>
+      </Upload>
+    </Col>
+  </Row>
+</Form.Item>
+
                 </Col>
                 <Col span={12}>
                   <Form.Item name="eventTime" label="Event Time" rules={[{ required: true }]}>
