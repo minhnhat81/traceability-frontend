@@ -33,7 +33,6 @@ import DPPPanel from "./EPCISDPPPanel";
 import { Upload } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
-
 export default function EPCISFormModal({
   open,
   editing,
@@ -41,20 +40,22 @@ export default function EPCISFormModal({
   batchStatus,
   onClose,
   onReload,
-}) {
+}: any) {
   const [form] = Form.useForm();
   const { tenant } = useAuth() as any;
   const tenantId = tenant?.id || 1;
 
-  const [products, setProducts] = useState([]);
-  const [materials, setMaterials] = useState([]);
-  const [bundles, setBundles] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [bundles, setBundles] = useState<any[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
 
-  const [dppValues, setDppValues] = useState({});
+  const [dppValues, setDppValues] = useState<Record<string, any>>({});
   const [openDpp, setOpenDpp] = useState(false);
-  const [viewing, setViewing] = useState(null);
+  const [viewing, setViewing] = useState<any>(null);
+
+  // ✅ giữ state docFiles để hiển thị file list (Upload controlled)
   const [docFiles, setDocFiles] = useState<any[]>([]);
 
   /** ===============================
@@ -83,6 +84,8 @@ export default function EPCISFormModal({
 
       product_code: undefined,
       material_id: undefined,
+
+      // ✅ dùng đúng field name này cho Select (để buildPayload lấy đúng)
       docBundleId: undefined,
     }),
     []
@@ -98,14 +101,16 @@ export default function EPCISFormModal({
         const [p, m, d] = await Promise.all([
           api().get(`/api/products?tenant_id=${tenantId}`),
           api().get(`/materials/?tenant_id=${tenantId}`),
-          api().get(`/api/documents?batch_code=${batchCode}&tenant_id=${tenantId}`),
+          api().get(
+            `/api/documents?batch_code=${batchCode}&tenant_id=${tenantId}`
+          ),
         ]);
 
         setProducts(p.data.items || p.data || []);
         setMaterials(Array.isArray(m.data) ? m.data : m.data.items || []);
 
         const bundleList =
-          (d.data.items || []).map((x) => ({
+          (d.data.items || []).map((x: any) => ({
             id: x.doc_bundle_id,
             desc: x.file_name,
           })) || [];
@@ -121,17 +126,19 @@ export default function EPCISFormModal({
    * ON OPEN → SET FORM DATA
    ================================== */
   useEffect(() => {
-  if (!open) {
-    setViewing(null);     // 🔥 BẮT BUỘC
-    setDppValues({});
-    form.resetFields();
-    return;
-  }
+    if (!open) {
+      setViewing(null); // 🔥 BẮT BUỘC
+      setDppValues({});
+      setDocFiles([]); // ✅ reset upload files khi đóng modal
+      form.resetFields();
+      return;
+    }
 
     if (!editing) {
       form.setFieldsValue(initVals);
       setViewing(null);
       setDppValues({});
+      setDocFiles([]); // ✅ reset upload files khi tạo mới
       return;
     }
 
@@ -159,7 +166,7 @@ export default function EPCISFormModal({
     const [blPrefix, blLine] = blData?.split(".") || ["8938501000400", "line1"];
 
     /** ---------- EPC LIST ---------- */
-    const epcRaw = (editing.epc_list || []).map((e) => stripUrn(e));
+    const epcRaw = (editing.epc_list || []).map((e: any) => stripUrn(e));
 
     /** ---------- ILMD ---------- */
     const ilmd = editing.ilmd || {};
@@ -168,7 +175,8 @@ export default function EPCISFormModal({
         .filter(([k]) => k !== "dpp")
         .map(([key, value]) => ({
           key,
-          value: typeof value === "string" ? value : JSON.stringify(value, null, 2),
+          value:
+            typeof value === "string" ? value : JSON.stringify(value, null, 2),
         })) || [];
 
     /** ---------- FILL FORM ---------- */
@@ -183,6 +191,8 @@ export default function EPCISFormModal({
 
       product_code: editing.product_code,
       material_id: editing.material_id,
+
+      // ✅ dùng đúng field name docBundleId
       docBundleId: editing.doc_bundle_id,
 
       readpoint_prefix: rpPrefix,
@@ -198,14 +208,14 @@ export default function EPCISFormModal({
     });
 
     setDppValues(editing?.ilmd?.dpp || {});
+    setDocFiles([]); // ✅ edit mode: không auto load file list vì chưa có API list file theo bundle
   }, [open, editing]);
 
   /** ===============================
    * BUILD PAYLOAD
    ================================== */
-  const buildPayload = (v) => {
+  const buildPayload = (v: any) => {
     const et = v.eventTime ? dayjs(v.eventTime) : dayjs();
-
     const ilmdExtra = entriesToObject(v.ilmdEntries);
 
     return {
@@ -231,11 +241,14 @@ export default function EPCISFormModal({
       /** ---------- GS1 SGLN BizLocation (NEW) ---------- */
       bizLocation: `urn:epc:id:sgln:${v.bizlocation_prefix}.${v.bizlocation_line}`,
 
+      // ✅ giữ nguyên payload field đang dùng
+      // ✅ nếu user chọn bundle -> gửi id
+      // ✅ nếu user chỉ upload file (chưa có API tạo bundle) -> để undefined (backend tuỳ xử lý)
       docBundleId: v.docBundleId,
 
       epcList: (v.epcList || [])
-        .filter((x) => String(x || "").trim())
-        .map((e) =>
+        .filter((x: any) => String(x || "").trim())
+        .map((e: any) =>
           e.startsWith("urn:epc:id:sgtin:") ? e : `urn:epc:id:sgtin:${e}`
         ),
 
@@ -257,7 +270,6 @@ export default function EPCISFormModal({
   const onSubmit = async () => {
     try {
       const v = await form.validateFields();
-
       const payload = buildPayload(v);
 
       setSubmitting(true);
@@ -278,6 +290,19 @@ export default function EPCISFormModal({
       message.error(err?.response?.data?.detail || "Submit failed");
       setSubmitting(false);
     }
+  };
+
+  /** ===============================
+   * DOC BUNDLE HELPERS
+   ================================== */
+
+  // ✅ validator: nếu đã upload file thì không bắt buộc chọn doc bundle
+  const validateDocBundle = async (_: any, value: any) => {
+    const hasBundle = value !== undefined && value !== null && value !== "";
+    const hasFiles = Array.isArray(docFiles) && docFiles.length > 0;
+
+    if (hasBundle || hasFiles) return Promise.resolve();
+    return Promise.reject(new Error("Please select doc bundle"));
   };
 
   /** ===============================
@@ -304,9 +329,16 @@ export default function EPCISFormModal({
               {/* EVENT TYPE + ACTION */}
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item name="type" label="Event Type" rules={[{ required: true }]}>
+                  <Form.Item
+                    name="type"
+                    label="Event Type"
+                    rules={[{ required: true }]}
+                  >
                     <Select
-                      options={EVENT_TYPES.map((v) => ({ label: v, value: v }))}
+                      options={EVENT_TYPES.map((v: any) => ({
+                        label: v,
+                        value: v,
+                      }))}
                     />
                   </Form.Item>
                 </Col>
@@ -316,7 +348,12 @@ export default function EPCISFormModal({
                     label="Action"
                     rules={[{ required: true }]}
                   >
-                    <Select options={ACTIONS.map((v) => ({ label: v, value: v }))} />
+                    <Select
+                      options={ACTIONS.map((v: any) => ({
+                        label: v,
+                        value: v,
+                      }))}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
@@ -324,8 +361,16 @@ export default function EPCISFormModal({
               {/* BIZ STEP + DISPOSITION */}
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item name="bizStep" label="BizStep" rules={[{ required: true }]}>
-                    <Select options={BIZ_STEPS} showSearch optionFilterProp="label" />
+                  <Form.Item
+                    name="bizStep"
+                    label="BizStep"
+                    rules={[{ required: true }]}
+                  >
+                    <Select
+                      options={BIZ_STEPS}
+                      showSearch
+                      optionFilterProp="label"
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -334,7 +379,11 @@ export default function EPCISFormModal({
                     label="Disposition"
                     rules={[{ required: true }]}
                   >
-                    <Select options={DISPOSITIONS} showSearch optionFilterProp="label" />
+                    <Select
+                      options={DISPOSITIONS}
+                      showSearch
+                      optionFilterProp="label"
+                    />
                   </Form.Item>
                 </Col>
               </Row>
@@ -346,7 +395,7 @@ export default function EPCISFormModal({
                     <Select
                       allowClear
                       showSearch
-                      options={materials.map((m) => ({
+                      options={materials.map((m: any) => ({
                         label: m.name,
                         value: m.id,
                       }))}
@@ -358,7 +407,7 @@ export default function EPCISFormModal({
                     <Select
                       allowClear
                       showSearch
-                      options={products.map((p) => ({
+                      options={products.map((p: any) => ({
                         label: `${p.code} — ${p.name}`,
                         value: p.code,
                       }))}
@@ -370,73 +419,74 @@ export default function EPCISFormModal({
               {/* DOC BUNDLE + TIME */}
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item
-  label="Doc Bundle"
-  required
->
-  <Row gutter={8} align="middle">
-    {/* Select Doc Bundle */}
-    <Col flex="auto">
-      <Form.Item
-        name="doc_bundle"
-        noStyle
-        rules={[{ required: true, message: "Please select doc bundle" }]}
-      >
-        <Select placeholder="Select doc bundle" />
-      </Form.Item>
-    </Col>
+                  {/* ✅ GIỮ layout: Upload nằm cạnh Select */}
+                  <Form.Item label="Doc Bundle" required>
+                    <Row gutter={8} align="middle">
+                      <Col flex="auto">
+                        {/* ✅ đổi name về docBundleId để khớp initVals/buildPayload */}
+                        <Form.Item
+                          name="docBundleId"
+                          noStyle
+                          rules={[{ validator: validateDocBundle }]}
+                        >
+                          <Select
+                            placeholder="Select doc bundle"
+                            showSearch
+                            optionFilterProp="label"
+                            options={(bundles || []).map((b: any) => ({
+                              label: b.desc || `Bundle ${b.id}`,
+                              value: b.id,
+                            }))}
+                          />
+                        </Form.Item>
+                      </Col>
 
-    {/* Upload Button */}
-    <Col>
-      <Upload
-  multiple
-  fileList={docFiles}
-  onChange={({ fileList }) => {
-  setDocFiles(fileList);
+                      <Col>
+                        <Upload
+                          multiple
+                          // ✅ controlled file list để luôn render file đã chọn
+                          fileList={docFiles}
+                          showUploadList={{ showRemoveIcon: true }}
+                          beforeUpload={(file) => {
+                            const allowedTypes = [
+                              "application/pdf",
+                              "image/jpeg",
+                              "image/png",
+                              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            ];
 
-  // ✅ auto set Doc Bundle nếu chưa có
-  if (fileList.length > 0) {
-    form.setFieldsValue({
-      docBundle: fileList[0].name, // hoặc custom value
-    });
-  } else {
-    form.setFieldsValue({
-      docBundle: undefined,
-    });
-  }
-}}
+                            if (!allowedTypes.includes(file.type)) {
+                              message.error("Only PDF / JPG / PNG / DOCX allowed");
+                              return Upload.LIST_IGNORE;
+                            }
 
-  beforeUpload={(file) => {
-    const allowedTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
+                            if (file.size / 1024 / 1024 > 10) {
+                              message.error("Max file size is 10MB");
+                              return Upload.LIST_IGNORE;
+                            }
 
-    if (!allowedTypes.includes(file.type)) {
-      message.error("Only PDF / JPG / PNG / DOCX allowed");
-      return Upload.LIST_IGNORE;
-    }
+                            return false; // ❗ không auto upload
+                          }}
+                          onChange={({ fileList }) => {
+                            setDocFiles(fileList);
 
-    if (file.size / 1024 / 1024 > 10) {
-      message.error("Max file size is 10MB");
-      return Upload.LIST_IGNORE;
-    }
-
-    return false; // ❗ không auto upload
-  }}
->
-  <Button icon={<UploadOutlined />}>Upload</Button>
-</Upload>
-
-    </Col>
-  </Row>
-</Form.Item>
-
+                            // ✅ trigger validate lại docBundleId (để bỏ lỗi đỏ ngay khi đã upload)
+                            form.validateFields(["docBundleId"]).catch(() => {});
+                          }}
+                        >
+                          <Button icon={<UploadOutlined />}>Upload</Button>
+                        </Upload>
+                      </Col>
+                    </Row>
+                  </Form.Item>
                 </Col>
+
                 <Col span={12}>
-                  <Form.Item name="eventTime" label="Event Time" rules={[{ required: true }]}>
+                  <Form.Item
+                    name="eventTime"
+                    label="Event Time"
+                    rules={[{ required: true }]}
+                  >
                     <DatePicker showTime style={{ width: "100%" }} />
                   </Form.Item>
                 </Col>
@@ -506,7 +556,11 @@ export default function EPCISFormModal({
                         <Form.Item {...field} name={field.name}>
                           <Input placeholder="companyPrefix.itemRef.serial" />
                         </Form.Item>
-                        <Button danger size="small" onClick={() => remove(field.name)}>
+                        <Button
+                          danger
+                          size="small"
+                          onClick={() => remove(field.name)}
+                        >
                           Remove
                         </Button>
                       </Space>
@@ -557,7 +611,10 @@ export default function EPCISFormModal({
                       </Space>
                     ))}
 
-                    <Button type="dashed" onClick={() => add({ type: "po", id: "" })}>
+                    <Button
+                      type="dashed"
+                      onClick={() => add({ type: "po", id: "" })}
+                    >
                       + Add Transaction
                     </Button>
                   </>
@@ -598,7 +655,10 @@ export default function EPCISFormModal({
                       </Space>
                     ))}
 
-                    <Button type="dashed" onClick={() => add({ key: "", value: "" })}>
+                    <Button
+                      type="dashed"
+                      onClick={() => add({ key: "", value: "" })}
+                    >
                       + Add ILMD
                     </Button>
                   </>
@@ -609,7 +669,11 @@ export default function EPCISFormModal({
               <Divider />
               <Space>
                 <strong>DPP for this event</strong>
-                <Button type="primary" size="small" onClick={() => setOpenDpp(true)}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => setOpenDpp(true)}
+                >
                   + Add DPP
                 </Button>
               </Space>
