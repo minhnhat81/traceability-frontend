@@ -391,7 +391,21 @@ export default function EPCISFormModal({
       <Upload
   multiple
   fileList={docFiles}
-  onChange={({ fileList }) => setDocFiles(fileList)}
+  onChange={({ fileList }) => {
+  setDocFiles(fileList);
+
+  // ✅ auto set Doc Bundle nếu chưa có
+  if (fileList.length > 0) {
+    form.setFieldsValue({
+      docBundle: fileList[0].name, // hoặc custom value
+    });
+  } else {
+    form.setFieldsValue({
+      docBundle: undefined,
+    });
+  }
+}}
+
   beforeUpload={(file) => {
     const allowedTypes = [
       "application/pdf",
