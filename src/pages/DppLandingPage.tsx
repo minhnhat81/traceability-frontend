@@ -54,24 +54,39 @@ function summarizeEvents(events: EventItem[]) {
     OTHER: 0,
   };
 
-  const normalizeRole = (raw: any) => {
-    if (!raw) return "";
-    return String(raw).trim().toUpperCase();
+  const pickRole = (e: any) => {
+    // ✅ Ưu tiên field thực tế đang hiển thị trên bảng (Owner)
+    // Tránh ưu tiên batch_owner_role vì hay bị "FARM" cho toàn batch
+    const candidates = [
+      e.owner,                 // thường là "FARM" | "SUPPLIER" | "MANUFACTURER" | "BRAND"
+      e.owner_role,
+      e.event_owner_role,
+      e.eventOwnerRole,
+      e.event_owner,
+      e.eventOwner,
+      // chỉ fallback cuối cùng mới dùng batch_owner_role
+      e.batch_owner_role,
+    ];
+
+    for (const c of candidates) {
+      if (typeof c === "string" && c.trim()) return c.trim().toUpperCase();
+    }
+    return "";
   };
 
-  const pickRole = (e: any) => {
-    // ✅ ưu tiên role của chính event
-    const role =
-      e.owner_role ??
-      e.event_owner_role ??
-      e.eventOwnerRole ??
-      e.owner ??
-      e.event_owner ??
-      e.eventOwner ??
-      e.ownerRole ??
-      e.batch_owner_role; // ⛳ fallback cuối cùng
-    return normalizeRole(role);
-  };
+  events.forEach((e: any) => {
+    const role = pickRole(e);
+
+    if (role.includes("FARM")) tiers.FARM++;
+    else if (role.includes("SUPPLIER")) tiers.SUPPLIER++;
+    else if (role.includes("MANUFACTURER")) tiers.MANUFACTURER++;
+    else if (role.includes("BRAND")) tiers.BRAND++;
+    else tiers.OTHER++;
+  });
+
+  return tiers;
+}
+
 
   const classify = (role: string) => {
     // ✅ ưu tiên match chính xác / bắt đầu bằng
