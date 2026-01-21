@@ -45,6 +45,7 @@ function shortHash(v?: string | null) {
  *  - role theo event: owner_role / event_owner_role / owner / event_owner ...
  *  - rồi mới fallback batch_owner_role
  */
+
 function summarizeEvents(events: EventItem[]) {
   const tiers = {
     FARM: 0,
@@ -55,21 +56,20 @@ function summarizeEvents(events: EventItem[]) {
   };
 
   const pickRole = (e: any) => {
-    // ✅ Ưu tiên field thực tế đang hiển thị trên bảng (Owner)
-    // Tránh ưu tiên batch_owner_role vì hay bị "FARM" cho toàn batch
     const candidates = [
-      e.owner,                 // thường là "FARM" | "SUPPLIER" | "MANUFACTURER" | "BRAND"
+      e.owner,
       e.owner_role,
       e.event_owner_role,
       e.eventOwnerRole,
       e.event_owner,
       e.eventOwner,
-      // chỉ fallback cuối cùng mới dùng batch_owner_role
-      e.batch_owner_role,
+      e.batch_owner_role, // fallback cuối
     ];
 
     for (const c of candidates) {
-      if (typeof c === "string" && c.trim()) return c.trim().toUpperCase();
+      if (typeof c === "string" && c.trim()) {
+        return c.trim().toUpperCase();
+      }
     }
     return "";
   };
