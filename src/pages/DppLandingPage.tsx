@@ -25,8 +25,7 @@ const { Panel } = Collapse;
 /* ======================
    Helpers
 ========================= */
-const safeDate = (v?: string | null) =>
-  v ? new Date(v).toLocaleString() : "-";
+const safeDate = (v?: string | null) => (v ? new Date(v).toLocaleString() : "-");
 
 function shortHash(v?: string | null) {
   if (!v) return "-";
@@ -37,6 +36,15 @@ function shortHash(v?: string | null) {
 /* ======================
    Supply chain summary
 ========================= */
+
+/**
+ * ✅ FIX: Đừng ưu tiên batch_owner_role vì thường là "role hiện tại của batch"
+ * và sẽ khiến mọi event đều bị đếm về FARM.
+ *
+ * Ưu tiên:
+ *  - role theo event: owner_role / event_owner_role / owner / event_owner ...
+ *  - rồi mới fallback batch_owner_role
+ */
 function summarizeEvents(events: EventItem[]) {
   const tiers = {
     FARM: 0,
@@ -46,16 +54,48 @@ function summarizeEvents(events: EventItem[]) {
     OTHER: 0,
   };
 
-  events.forEach((e: any) => {
-    const role = String(
-      e.owner_role || e.event_owner_role || e.batch_owner_role || ""
-    ).toUpperCase();
+  const normalizeRole = (raw: any) => {
+    if (!raw) return "";
+    return String(raw).trim().toUpperCase();
+  };
 
-    if (role.includes("FARM")) tiers.FARM++;
-    else if (role.includes("SUPPLIER")) tiers.SUPPLIER++;
-    else if (role.includes("MANUFACTURER")) tiers.MANUFACTURER++;
-    else if (role.includes("BRAND")) tiers.BRAND++;
-    else tiers.OTHER++;
+  const pickRole = (e: any) => {
+    // ✅ ưu tiên role của chính event
+    const role =
+      e.owner_role ??
+      e.event_owner_role ??
+      e.eventOwnerRole ??
+      e.owner ??
+      e.event_owner ??
+      e.eventOwner ??
+      e.ownerRole ??
+      e.batch_owner_role; // ⛳ fallback cuối cùng
+    return normalizeRole(role);
+  };
+
+  const classify = (role: string) => {
+    // ✅ ưu tiên match chính xác / bắt đầu bằng
+    // (tránh includes gây false-positive kiểu "FARMER" cũng match FARM)
+    const r = role;
+
+    if (r === "FARM" || r.startsWith("FARM ")) return "FARM";
+    if (r === "SUPPLIER" || r.startsWith("SUPPLIER ")) return "SUPPLIER";
+    if (r === "MANUFACTURER" || r.startsWith("MANUFACTURER ")) return "MANUFACTURER";
+    if (r === "BRAND" || r.startsWith("BRAND ")) return "BRAND";
+
+    // fallback mềm nếu data có format lạ
+    if (r.includes("MANUFACTURER")) return "MANUFACTURER";
+    if (r.includes("SUPPLIER")) return "SUPPLIER";
+    if (r.includes("BRAND")) return "BRAND";
+    if (r.includes("FARM")) return "FARM";
+
+    return "OTHER";
+  };
+
+  events.forEach((e: any) => {
+    const role = pickRole(e);
+    const bucket = classify(role);
+    (tiers as any)[bucket] = ((tiers as any)[bucket] || 0) + 1;
   });
 
   return tiers;
@@ -167,7 +207,11 @@ export default function DppLandingPage({
             <Text type="secondary">Brand: {brand}</Text>
 
             <Space wrap>
-              <Tag color={data.blockchain.status === "CONFIRMED" ? "green" : "orange"}>
+              <Tag
+                color={
+                  data.blockchain.status === "CONFIRMED" ? "green" : "orange"
+                }
+              >
                 {data.blockchain.status === "CONFIRMED"
                   ? "Verified on blockchain"
                   : "Not verified"}
@@ -177,21 +221,20 @@ export default function DppLandingPage({
 
             <Divider style={{ margin: "12px 0" }} />
 
-            {/* ✅ EXPORT PDF BUTTON (BẠN THIẾU NÚT NÀY NÊN UI KHÔNG ĐỔI) */}
+            {/* ✅ EXPORT PDF BUTTON */}
             <Space wrap>
               <Button type="primary" onClick={onExportPdf}>
                 📄 Export EU DPP PDF
               </Button>
-
-              {/* (tuỳ chọn) nếu bạn muốn 1 nút phụ */}
-              {/* <Button onClick={() => window.print()}>Print</Button> */}
             </Space>
 
             {/* ===== QUICK FACTS ===== */}
             <Row gutter={[12, 12]}>
               <Col xs={24} sm={12}>
                 <Text type="secondary">Product code</Text>
-                <div style={{ fontWeight: 600 }}>{data.batch.product_code || "-"}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {data.batch.product_code || "-"}
+                </div>
               </Col>
 
               <Col xs={24} sm={12}>
@@ -271,7 +314,11 @@ export default function DppLandingPage({
             header={
               <Space>
                 ⛓ Blockchain proof
-                <Tag color={data.blockchain.status === "CONFIRMED" ? "green" : "orange"}>
+                <Tag
+                  color={
+                    data.blockchain.status === "CONFIRMED" ? "green" : "orange"
+                  }
+                >
                   {data.blockchain.status}
                 </Tag>
               </Space>
@@ -281,28 +328,38 @@ export default function DppLandingPage({
             <Space direction="vertical" size={8} style={{ width: "100%" }}>
               <div>
                 <Text type="secondary">Network</Text>
-                <div style={{ fontWeight: 600 }}>{data.blockchain.network || "-"}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {data.blockchain.network || "-"}
+                </div>
               </div>
 
               <div>
                 <Text type="secondary">Tx hash</Text>
-                <div style={{ fontWeight: 600 }}>{shortHash(data.blockchain.tx_hash)}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {shortHash(data.blockchain.tx_hash)}
+                </div>
               </div>
 
               <Row gutter={[12, 12]}>
                 <Col xs={24} sm={12}>
                   <Text type="secondary">Block</Text>
-                  <div style={{ fontWeight: 600 }}>{data.blockchain.block_number ?? "-"}</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {data.blockchain.block_number ?? "-"}
+                  </div>
                 </Col>
                 <Col xs={24} sm={12}>
                   <Text type="secondary">Anchored at</Text>
-                  <div style={{ fontWeight: 600 }}>{safeDate(data.blockchain.created_at)}</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {safeDate(data.blockchain.created_at)}
+                  </div>
                 </Col>
               </Row>
 
               <div>
                 <Text type="secondary">Root hash</Text>
-                <div style={{ fontWeight: 600 }}>{shortHash(data.blockchain.root_hash)}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {shortHash(data.blockchain.root_hash)}
+                </div>
               </div>
             </Space>
           </Panel>
@@ -352,9 +409,7 @@ export default function DppLandingPage({
           {/* DID */}
           <Panel header="🆔 Digital Identity" key="did">
             <DIDViewer
-              initialDid={
-                (data.events?.[0]?.ilmd as any)?.dpp?.digital_identity?.did || null
-              }
+              initialDid={(data.events?.[0]?.ilmd as any)?.dpp?.digital_identity?.did || null}
             />
           </Panel>
         </Collapse>
