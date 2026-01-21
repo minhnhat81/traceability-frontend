@@ -55,14 +55,14 @@ function summarizeEvents(events: EventItem[]) {
   };
 
   const pickRole = (e: any) => {
+    // ❌ KHÔNG dùng batch_owner_role
     const candidates = [
-      e.owner,
-      e.owner_role,
       e.event_owner_role,
       e.eventOwnerRole,
+      e.owner_role,
+      e.owner,
       e.event_owner,
       e.eventOwner,
-      e.batch_owner_role, // fallback cuối
     ];
 
     for (const c of candidates) {
@@ -74,29 +74,18 @@ function summarizeEvents(events: EventItem[]) {
   };
 
   const classify = (role: string) => {
-    // ✅ ưu tiên match chính xác / bắt đầu bằng
-    // (tránh includes gây false-positive kiểu "FARMER" cũng match FARM)
-    const r = role;
-
-    if (r === "FARM" || r.startsWith("FARM ")) return "FARM";
-    if (r === "SUPPLIER" || r.startsWith("SUPPLIER ")) return "SUPPLIER";
-    if (r === "MANUFACTURER" || r.startsWith("MANUFACTURER "))
+    if (role === "FARM" || role.startsWith("FARM")) return "FARM";
+    if (role === "SUPPLIER" || role.startsWith("SUPPLIER")) return "SUPPLIER";
+    if (role === "MANUFACTURER" || role.startsWith("MANUFACTURER"))
       return "MANUFACTURER";
-    if (r === "BRAND" || r.startsWith("BRAND ")) return "BRAND";
-
-    // fallback mềm nếu data có format lạ
-    if (r.includes("MANUFACTURER")) return "MANUFACTURER";
-    if (r.includes("SUPPLIER")) return "SUPPLIER";
-    if (r.includes("BRAND")) return "BRAND";
-    if (r.includes("FARM")) return "FARM";
-
+    if (role === "BRAND" || role.startsWith("BRAND")) return "BRAND";
     return "OTHER";
   };
 
-  events.forEach((e: any) => {
+  events.forEach((e) => {
     const role = pickRole(e);
     const bucket = classify(role);
-    (tiers as any)[bucket] = ((tiers as any)[bucket] || 0) + 1;
+    (tiers as any)[bucket]++;
   });
 
   return tiers;
