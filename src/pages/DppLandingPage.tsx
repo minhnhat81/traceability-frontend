@@ -45,7 +45,6 @@ function shortHash(v?: string | null) {
  *  - role theo event: owner_role / event_owner_role / owner / event_owner ...
  *  - rồi mới fallback batch_owner_role
  */
-
 function summarizeEvents(events: EventItem[]) {
   const tiers = {
     FARM: 0,
