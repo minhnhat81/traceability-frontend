@@ -73,20 +73,6 @@ function summarizeEvents(events: EventItem[]) {
     return "";
   };
 
-  events.forEach((e: any) => {
-    const role = pickRole(e);
-
-    if (role.includes("FARM")) tiers.FARM++;
-    else if (role.includes("SUPPLIER")) tiers.SUPPLIER++;
-    else if (role.includes("MANUFACTURER")) tiers.MANUFACTURER++;
-    else if (role.includes("BRAND")) tiers.BRAND++;
-    else tiers.OTHER++;
-  });
-
-  return tiers;
-}
-
-
   const classify = (role: string) => {
     // ✅ ưu tiên match chính xác / bắt đầu bằng
     // (tránh includes gây false-positive kiểu "FARMER" cũng match FARM)
@@ -94,7 +80,8 @@ function summarizeEvents(events: EventItem[]) {
 
     if (r === "FARM" || r.startsWith("FARM ")) return "FARM";
     if (r === "SUPPLIER" || r.startsWith("SUPPLIER ")) return "SUPPLIER";
-    if (r === "MANUFACTURER" || r.startsWith("MANUFACTURER ")) return "MANUFACTURER";
+    if (r === "MANUFACTURER" || r.startsWith("MANUFACTURER "))
+      return "MANUFACTURER";
     if (r === "BRAND" || r.startsWith("BRAND ")) return "BRAND";
 
     // fallback mềm nếu data có format lạ
@@ -114,6 +101,7 @@ function summarizeEvents(events: EventItem[]) {
 
   return tiers;
 }
+
 
 /* ======================
    Component
