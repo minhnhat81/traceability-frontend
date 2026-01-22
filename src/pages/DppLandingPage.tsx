@@ -54,36 +54,42 @@ function summarizeEvents(events: EventItem[]) {
     OTHER: 0,
   };
 
-  const normalize = (v?: string) =>
-    (v || "").trim().toUpperCase();
-
   const pickRole = (e: any) => {
-    // ✅ CHỈ dùng field backend đã chuẩn hoá
-    if (e.owner_role) return normalize(e.owner_role);
+    // ❌ KHÔNG dùng batch_owner_role
+    const candidates = [
+      e.event_owner_role,
+      e.eventOwnerRole,
+      e.owner_role,
+      e.owner,
+      e.event_owner,
+      e.eventOwner,
+    ];
 
-    // fallback cuối cùng (debug only)
-    if (e.batch_owner_role) return normalize(e.batch_owner_role);
-
+    for (const c of candidates) {
+      if (typeof c === "string" && c.trim()) {
+        return c.trim().toUpperCase();
+      }
+    }
     return "";
   };
 
-  const classify = (r: string) => {
-    if (r === "FARM") return "FARM";
-    if (r === "SUPPLIER") return "SUPPLIER";
-    if (r === "MANUFACTURER") return "MANUFACTURER";
-    if (r === "BRAND") return "BRAND";
+  const classify = (role: string) => {
+    if (role === "FARM" || role.startsWith("FARM")) return "FARM";
+    if (role === "SUPPLIER" || role.startsWith("SUPPLIER")) return "SUPPLIER";
+    if (role === "MANUFACTURER" || role.startsWith("MANUFACTURER"))
+      return "MANUFACTURER";
+    if (role === "BRAND" || role.startsWith("BRAND")) return "BRAND";
     return "OTHER";
   };
 
-  for (const e of events) {
+  events.forEach((e) => {
     const role = pickRole(e);
     const bucket = classify(role);
-    tiers[bucket]++;
-  }
+    (tiers as any)[bucket]++;
+  });
 
   return tiers;
 }
-
 
 
 /* ======================
